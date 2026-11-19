@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PrintHub – Student Printing</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.58.0/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--b:#2563eb;--p:#7c3aed;--ink:#1e1b4b;--mut:#6b7280;--ok:#16a34a;--e:cubic-bezier(.22,1,.36,1)}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Segoe UI,sans-serif;color:var(--ink);min-height:100vh;background:linear-gradient(120deg,#eef2ff,#f5f3ff,#e0f2fe,#ede9fe);background-size:300% 300%;animation:bg 18s ease infinite}
+@keyframes bg{50%{background-position:100% 50%}}
+.blob{position:fixed;border-radius:50%;filter:blur(80px);opacity:.4;z-index:-1;animation:float 14s ease-in-out infinite}
+.b1{width:320px;height:320px;background:#60a5fa;top:-90px;left:-90px}.b2{width:380px;height:380px;background:#a78bfa;bottom:-120px;right:-90px;animation-delay:-6s}
+@keyframes float{50%{transform:translate(50px,40px) scale(1.12)}}
+@keyframes up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(.7);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(245,158,11,.5)}100%{box-shadow:0 0 0 9px rgba(245,158,11,0)}}
+@keyframes bob{50%{transform:translateY(-8px)}}
+@keyframes rot{to{transform:rotate(360deg)}}
+@keyframes sheet{0%{transform:translateY(40px);opacity:0}30%,70%{opacity:1}100%{transform:translateY(-60px);opacity:0}}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 4%;background:rgba(255,255,255,.75);backdrop-filter:blur(14px);position:sticky;top:0;z-index:5;border-bottom:1px solid rgba(124,58,237,.12)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:22px}.logo span{background:linear-gradient(90deg,var(--b),var(--p));-webkit-background-clip:text;color:transparent}
+.brand{display:flex;align-items:center;gap:14px;margin-bottom:14px}.brand small{color:var(--mut)}.brand.c{justify-content:center;font-size:22px;font-weight:800}
+main{max-width:1000px;margin:26px auto;padding:0 14px}
+.card{background:rgba(255,255,255,.9);border:1px solid #fff;border-radius:20px;padding:24px;margin-bottom:18px;box-shadow:0 12px 34px rgba(79,70,229,.12);animation:up .6s var(--e) both}
+h2{margin:0 0 14px;font-size:20px}small,.mut{color:var(--mut)}
+input,select,textarea{width:100%;padding:12px 14px;border:2px solid #e0e7ff;border-radius:12px;margin:6px 0 12px;font-size:16px;font-family:inherit;background:#fff;transition:.25s}
+input:focus,textarea:focus{outline:0;border-color:var(--p);box-shadow:0 0 0 4px rgba(124,58,237,.15)}
+label{font-size:13px;font-weight:600;color:var(--mut)}a{color:var(--p);font-weight:600}
+.pw{position:relative}.pw input{padding-right:48px}.eye{position:absolute;right:6px;top:10px;border:0;background:none;font-size:20px;cursor:pointer;padding:6px}
+.btn{background:linear-gradient(90deg,var(--b),var(--p));color:#fff;border:0;padding:13px 22px;border-radius:12px;font-weight:700;cursor:pointer;font-size:15px;transition:.3s var(--e);box-shadow:0 6px 16px rgba(124,58,237,.28);text-decoration:none;display:inline-block}
+.btn:hover{transform:translateY(-2px)}.btn:active{transform:scale(.97)}.btn:disabled{opacity:.6}.btn.sm{padding:8px 12px;font-size:13px;box-shadow:none}.btn.ghost{background:#eef2ff;color:var(--b)}
+.tabs,.seg{display:flex;background:#eef2ff;border-radius:14px;padding:4px;gap:4px;flex-wrap:wrap;margin-bottom:14px}.tabs button,.seg button{flex:1;border:0;background:rgba(255,255,255,.8);padding:10px 8px;border-radius:10px;font-weight:700;cursor:pointer;color:#475569;transition:.3s;white-space:nowrap}
+.tabs button.on,.seg button.on{background:linear-gradient(90deg,var(--b),var(--p));color:#fff;box-shadow:0 4px 12px rgba(124,58,237,.3)}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.drop{border:3px dashed #a5b4fc;border-radius:18px;padding:34px 14px;text-align:center;cursor:pointer;transition:.3s;background:#f8faff}.drop>div:first-child{display:inline-block;font-size:42px;animation:bob 2.6s infinite}
+.drop:hover,.drop.on{background:#ede9fe;border-color:var(--p)}
+.item{border:2px solid #e0e7ff;border-radius:16px;padding:14px;margin-bottom:12px;background:#fff;animation:pop .4s var(--e)}
+.ih{display:flex;align-items:center;gap:12px;margin-bottom:10px}.fi{flex:1;min-width:0}.fi b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdfi{width:42px;height:52px;border-radius:7px;background:linear-gradient(160deg,#ef4444,#f97316);color:#fff;font-weight:800;font-size:12px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;flex:none}
+.x{border:0;background:#fee2e2;color:#dc2626;width:34px;height:34px;border-radius:50%;cursor:pointer;font-weight:800}
+.lb{font-size:13px;font-weight:700;color:var(--mut);margin:12px 0 6px}.seg{margin-bottom:10px}.seg.g2 button,.seg.g4 button{flex:1 1 0}
+.ib{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;padding-top:12px;border-top:1px dashed #e0e7ff}
+.cp{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px}.step{display:flex;align-items:center;background:#eef2ff;border-radius:12px;overflow:hidden}
+.step button{border:0;background:none;width:38px;height:40px;font-size:20px;font-weight:700;color:var(--p);cursor:pointer}.step button:active{background:#ddd6fe}
+.step input{width:48px;height:40px;margin:0;padding:0;border:0;border-radius:0;text-align:center;font-weight:700;background:#fff;-moz-appearance:textfield}.step input::-webkit-inner-spin-button{display:none}
+.pr{text-align:right;display:flex;flex-direction:column}.pr b{font-size:22px;color:var(--p)}
+.stat{padding:18px;border-radius:18px;color:#fff;animation:pop .6s var(--e) both;box-shadow:0 10px 24px rgba(79,70,229,.25)}.stat b{font-size:28px;display:block}
+.s1{background:linear-gradient(135deg,var(--b),#60a5fa)}.s2{background:linear-gradient(135deg,var(--p),#a78bfa)}.s3{background:linear-gradient(135deg,#4f46e5,#7c3aed)}.s4{background:linear-gradient(135deg,#0ea5e9,var(--b))}
+.rates span{display:inline-block;background:#ede9fe;color:var(--p);padding:6px 12px;border-radius:20px;margin:3px;font-weight:600;font-size:13px}
+.shopc{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #e0e7ff;border-radius:16px;padding:12px 14px;margin-top:12px}
+.av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--b),var(--p));color:#fff;font-weight:800;font-size:20px;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 6px 14px rgba(124,58,237,.35)}
+.si{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:14px}.si b{font-size:16px}.si em{color:var(--mut);font-style:normal;font-size:12px}
+.sb{display:flex;flex-direction:column;gap:6px}.sb .btn{text-align:center;white-space:nowrap}.btn.del{background:linear-gradient(90deg,#ef4444,#f97316);box-shadow:none}
+.btn.wa{background:linear-gradient(90deg,#16a34a,#22c55e)}
+.shopc{position:relative;overflow:hidden;animation:pop .6s var(--e) backwards;transition:transform .3s var(--e),box-shadow .3s}.shopc:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(124,58,237,.22)}
+.shopc::after{content:"";position:absolute;top:0;left:-40%;width:28%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);transform:skewX(-20deg);animation:shim 4.5s 1.2s infinite;pointer-events:none}
+.av{animation:ring 2s infinite}.si>*{animation:slideR .6s var(--e) backwards}.si>:nth-child(2){animation-delay:.12s}.si>:nth-child(3){animation-delay:.24s}
+.ph{display:inline-block;font-style:normal;transform-origin:50% 60%;animation:shake 3s infinite}
+.sb .btn:first-child{animation:glow 2s infinite}.sb .btn.wa{animation:bob 3s ease-in-out infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(124,58,237,.55)}70%,100%{box-shadow:0 0 0 14px rgba(124,58,237,0)}}
+@keyframes slideR{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
+@keyframes shake{0%,55%,100%{transform:rotate(0)}60%{transform:rotate(-20deg)}65%{transform:rotate(18deg)}70%{transform:rotate(-14deg)}75%{transform:rotate(12deg)}80%{transform:rotate(-6deg)}}
+@keyframes glow{50%{box-shadow:0 0 0 6px rgba(37,99,235,.18)}}
+@keyframes shim{to{left:130%}}
+@media(max-width:480px){.shopc{flex-wrap:wrap}.sb{flex-direction:row;width:100%}.sb .btn{flex:1}}
+.total{font-size:34px;font-weight:800;color:var(--p)}
+.tag{padding:4px 11px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block}
+.pending{background:#fef3c7;color:#b45309;animation:pulse 1.6s infinite}.done{background:#dcfce7;color:var(--ok)}.paid{background:#dbeafe;color:var(--b)}.unpaid{background:#fee2e2;color:#dc2626}
+.bar{height:12px;background:#e0e7ff;border-radius:8px;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--b),var(--p));transition:width 1.2s var(--e)}
+.hide{display:none!important}.err{background:#fee2e2;color:#b91c1c;padding:10px 12px;border-radius:10px;font-size:14px;margin-bottom:12px}
+.pay{display:flex;gap:10px;flex-wrap:wrap}.pay label{flex:1;min-width:130px;border:2px solid #e0e7ff;border-radius:14px;padding:13px;cursor:pointer;color:var(--ink)}.pay input{width:auto;margin:0 6px 0 0}.pay label:has(input:checked){border-color:var(--p);background:#f5f3ff}
+#qr{display:inline-block;padding:10px;background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+.pc{text-align:center;background:#f8faff;border-radius:16px;padding:14px}.pie{width:150px;height:150px;margin:10px auto;display:block;filter:drop-shadow(0 6px 12px rgba(79,70,229,.2))}.lg{font-size:13px;text-align:left;display:inline-block}.lg div{margin:3px 0}.lg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+@keyframes dsh{from{stroke-dasharray:0 160}}
+.bcw{text-align:center;background:#fff;border:1px dashed #c7d2fe;border-radius:10px;padding:8px;margin:6px 0}.bcw svg{max-width:100%;height:44px}.bcn{font-weight:800;letter-spacing:2px;font-size:13px;margin-top:2px}
+.oc{border:2px solid #eef2ff;border-radius:16px;padding:14px;margin-bottom:12px;background:#fff;animation:up .5s var(--e) both}
+.oh{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.oh b{font-size:16px;margin-right:auto}
+.fl{background:#f8faff;border-radius:12px;padding:10px;margin:8px 0;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.msg{background:#fef9c3;border-left:4px solid #eab308;padding:10px;border-radius:8px;margin:8px 0}
+.oa{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}.oa>b{margin-right:auto;font-size:18px}
+.oid{font-size:28px;font-weight:800;letter-spacing:2px;color:var(--p);background:#f5f3ff;border-radius:14px;padding:10px;margin:10px 0 4px;display:inline-block}
+.big{width:70px;height:70px;border-radius:50%;margin:0 auto 10px;background:var(--ok);color:#fff;font-size:38px;font-weight:800;display:flex;align-items:center;justify-content:center;animation:pop .5s var(--e)}
+table{width:100%;border-collapse:collapse;font-size:14px;text-align:left}td{padding:9px 6px;border-bottom:1px solid #eef2ff}
+.auth{display:flex;justify-content:center;align-items:center;min-height:80vh}
+.split{position:relative;display:grid;grid-template-columns:1fr 1fr;width:100%;max-width:1000px;min-height:620px;background:#fff;border:6px solid var(--ink);border-radius:28px;overflow:hidden;box-shadow:0 30px 70px rgba(79,70,229,.3);animation:up .7s var(--e) both}
+.lp{padding:30px 44px;display:flex;flex-direction:column;justify-content:center}
+.lg0{display:flex;align-items:center;gap:8px;font-weight:800;font-size:20px;margin-bottom:22px}.lg0 span{background:linear-gradient(90deg,var(--b),var(--p));-webkit-background-clip:text;color:transparent}
+.wt{font-size:34px;margin:0 0 4px;letter-spacing:-1px}
+.rf{display:flex;justify-content:space-between;align-items:center;margin:-4px 0 14px}.rm{display:flex;align-items:center;gap:6px;cursor:pointer}.rm input{width:auto;margin:0}
+.bt{display:flex;gap:12px}.bt .btn{flex:1;padding:13px 8px}.btn.out{background:#fff;color:var(--p);border:2px solid var(--p);box-shadow:none}
+.terms{font-size:11px;color:var(--mut);margin:18px 0 0}
+.rp{position:relative;background:radial-gradient(circle at 80% 10%,rgba(255,255,255,.25),transparent 40%),linear-gradient(160deg,#2563eb,#7c3aed 60%,#a78bfa);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px;color:#fff;text-align:center;overflow:hidden}
+.rg b{font-size:26px;display:block;letter-spacing:-.5px}.rg span{font-size:14px;opacity:.9}.rp .prn{margin:6px auto;flex:none}
+.rp .rates span{background:rgba(255,255,255,.2);color:#fff}.gl{width:100%}.rp .shopc{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);color:#fff;text-align:left}.rp .si em{color:#e0e7ff}
+.rp .btn{background:#fff;color:var(--p)}.rp .btn.wa{background:#22c55e;color:#fff}
+.seam{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:50%;border:0;background:#facc15;color:var(--ink);font-size:16px;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:4;transition:.3s}.seam:hover{transform:translate(-50%,-50%) scale(1.12)}
+.onlym{display:none}
+@media(max-width:820px){.split{grid-template-columns:1fr;border-width:4px;border-radius:22px;min-height:0}.rp,.seam{display:none}.lp{padding:24px 18px}.onlym{display:block;margin-bottom:12px}.wt{font-size:28px}}
+.hero h1{font-size:44px;line-height:1.05;margin:0 0 14px;background:linear-gradient(90deg,var(--b),var(--p));-webkit-background-clip:text;color:transparent}.hero p{color:var(--mut);font-size:17px;max-width:380px}
+.prn{position:relative;width:300px;height:270px;margin-top:20px}
+.pbody{position:absolute;top:30px;left:30px;width:230px;height:92px;border-radius:24px;background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 20px 34px rgba(79,70,229,.35);z-index:3;animation:bob 3s ease-in-out infinite}
+.slot{position:absolute;left:28px;right:28px;top:22px;height:10px;border-radius:6px;background:#1e1b4b}
+.led{position:absolute;right:22px;bottom:16px;width:10px;height:10px;border-radius:50%;background:#4ade80;animation:blink 1s infinite}
+.pl{position:absolute;left:28px;bottom:14px;color:#e0e7ff;font-size:11px;font-weight:800;letter-spacing:2px}
+.sheet{position:absolute;left:62px;top:30px;width:166px;height:190px;background:#fff;border-radius:6px 6px 10px 10px;box-shadow:0 10px 24px rgba(79,70,229,.25);z-index:2;padding:34px 14px 0;animation:feed 4.5s ease-in-out infinite}
+.sheet s{display:block;height:8px;border-radius:4px;background:#c7d2fe;margin:0 0 12px;width:100%}.sheet s:nth-child(1){width:70%}.sheet s:nth-child(3){width:85%}.sheet s:nth-child(4){width:55%}
+.prn i{font-style:normal;position:absolute;font-size:30px;animation:bob 3s ease-in-out infinite}.fi1{left:0;top:150px}.fi2{right:0;top:70px;animation-delay:-1s!important}.fi3{right:10px;top:200px;animation-delay:-2s!important}.fi4{left:10px;top:0;animation-delay:-1.5s!important}
+.prn .led{font-size:0;animation:blink 1s infinite}
+@keyframes feed{0%{transform:translateY(-150px);opacity:1}50%,85%{transform:translateY(24px);opacity:1}100%{transform:translateY(24px);opacity:0}}
+@keyframes blink{50%{opacity:.25}}
+.pstack{height:110px;position:relative;margin-top:24px}.paper{position:absolute;bottom:0;width:60px;height:78px;background:#fff;border-radius:6px;box-shadow:0 6px 16px rgba(79,70,229,.18);border-top:6px solid var(--p);animation:sheet 4s ease-in-out infinite}
+.paper:nth-child(2){left:70px;animation-delay:1.3s;border-top-color:var(--b)}.paper:nth-child(3){left:140px;animation-delay:2.6s}
+.sw{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.sw label{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:15px;color:var(--ink)}
+.sw input{display:none}.sw .tg{width:46px;height:26px;border-radius:20px;background:#cbd5e1;position:relative;transition:.3s}.sw .tg::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.3s}
+.sw input:checked+.tg{background:linear-gradient(90deg,var(--b),var(--p))}.sw input:checked+.tg::after{transform:translateX(20px)}
+#upl{position:fixed;inset:0;background:rgba(30,27,75,.45);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:20}
+.ub{background:#fff;border-radius:22px;padding:30px 36px;text-align:center}.spin{width:50px;height:50px;border-radius:50%;border:5px solid #e0e7ff;border-top-color:var(--p);margin:0 auto 12px;animation:rot .9s linear infinite}
+#toast{position:fixed;bottom:-80px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:13px 22px;border-radius:30px;opacity:0;transition:.5s var(--e);z-index:30;max-width:92%;text-align:center}#toast.show{opacity:1;bottom:24px}
+@media(max-width:820px){.auth{grid-template-columns:1fr}.hero{display:none}}
+@media(max-width:600px){.seg.g4{display:grid;grid-template-columns:1fr 1fr}.ib{flex-wrap:wrap}.pr{margin-left:auto}main{margin:14px auto;padding:0 10px}.card{padding:16px;border-radius:16px}.seg button,.tabs button{font-size:13px;padding:9px 4px}#st{grid-template-columns:1fr 1fr}.stat b{font-size:22px}.oa .btn,.fl .btn{flex:1;text-align:center}.total{font-size:28px}.logo{font-size:19px}}
+/* ===== Admin: files table ===== */
+.ft{overflow-x:auto;margin:10px 0;border:1px solid #e0e7ff;border-radius:14px;background:#fff}
+.ft table{min-width:1020px;font-size:13px}
+.ft th{background:#eef2ff;color:var(--mut);font-size:12px;padding:9px 8px;text-align:left;white-space:nowrap}
+.ft td{padding:9px 8px;vertical-align:middle}
+.ft td.n{text-align:center;font-weight:700}
+.ft td.fn{max-width:200px;word-break:break-word}
+.ft tfoot td{background:#f5f3ff;font-weight:800;border-bottom:0}
+/* ===== Admin dashboard layout ===== */
+main.wide{max-width:none;margin:0;padding:0}
+.adm{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:100vh}
+.sd{background:#fff;border-right:1px solid #eef2ff;padding:18px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+.sd .lg0{margin-bottom:10px}
+.shopbox{display:flex;gap:10px;align-items:center;border:1px solid #e0e7ff;border-radius:12px;padding:8px 10px;margin:0 0 14px;font-weight:700;font-size:14px}
+.ca{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--b),var(--p));color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex:none}
+.sd .mi{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:0;background:none;font-weight:600;color:#475569;cursor:pointer;text-align:left;font-size:14px;width:100%}
+.sd .mi:hover{background:#f8faff}.sd .mi.on{background:#f5f3ff;color:var(--p)}
+.sd .mt{padding:0 6px;margin:4px 0}
+.me{margin-top:auto;display:flex;gap:10px;align-items:center;padding:10px 6px;border-top:1px solid #eef2ff;min-width:0}
+.me div:last-child{min-width:0;font-size:13px}.me small{display:block;white-space:normal;overflow-wrap:anywhere;font-size:11.5px;line-height:1.3}
+.ac{padding:22px 24px;min-width:0}
+.ah{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.ah h2{font-size:26px;margin:0}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tools input{margin:0;width:240px;padding:9px 12px;font-size:14px}
+.tools .seg{margin:0;padding:3px}.tools .seg button{padding:8px 12px;font-size:13px}
+.sc4{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px;margin-bottom:16px}
+.sk{background:#fff;border:1px solid #eef0f6;border-radius:14px;padding:14px 16px;animation:pop .5s var(--e) both;min-width:0}
+.sk>small{display:block;font-weight:600}
+.sk .v{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin:6px 0;flex-wrap:wrap}
+.sk b{font-size:28px}.sk svg{width:96px;max-width:100%;height:36px;flex:none}
+.chg{font-size:11px;font-weight:700;padding:2px 6px;border-radius:6px}.chg.up{background:#dcfce7;color:#16a34a}.chg.dn{background:#fee2e2;color:#dc2626}
+.ot{background:#fff;border:1px solid #eef0f6;border-radius:14px;overflow:hidden}
+.ot .sc{overflow-x:auto}
+.ot table{min-width:880px}
+.ot th{background:#fafbff;color:var(--mut);font-size:12px;font-weight:700;padding:11px 10px;text-align:left;white-space:nowrap;border-bottom:1px solid #eef0f6}
+.ot td{padding:12px 10px;vertical-align:middle;font-size:13px}
+.ot tr.r:hover{background:#faf9ff}
+.ot tr.r.sel{background:#f3efff;box-shadow:inset 3px 0 0 var(--p)}
+.ot input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:#7c3aed;cursor:pointer}
+.ot tr.dt>td{background:#fafaff;padding:14px}
+.cu{display:flex;gap:10px;align-items:center}.cu small{display:block}
+.pgn{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-top:1px solid #eef0f6;font-size:13px}
+.pgn select{width:auto;margin:0 0 0 6px;padding:5px 8px;font-size:13px;border-radius:8px}
+.pgn .pb{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.pgn .pb button{border:1px solid #e0e7ff;background:#fff;border-radius:8px;min-width:32px;height:32px;cursor:pointer;font-weight:700;color:#475569}
+.pgn .pb button.on{background:var(--p);color:#fff;border-color:var(--p)}.pgn .pb button:disabled{opacity:.4;cursor:default}
+.selbar{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#fff;border-radius:14px;box-shadow:0 12px 36px rgba(30,27,75,.25);padding:10px 14px;display:flex;gap:14px;align-items:center;z-index:15;font-size:14px;white-space:nowrap;max-width:94vw;overflow-x:auto}
+.selbar button{border:0;background:none;font-weight:700;cursor:pointer;color:var(--ink);font-size:14px}.selbar .rd{color:#dc2626}
+@media(max-width:820px){.adm{grid-template-columns:minmax(0,1fr)}.sd{position:static;height:auto;flex-direction:row;flex-wrap:wrap;padding:10px;align-items:center}.sd .mi{width:auto}.shopbox,.sd .mt,.me{display:none}.sd .lg0{margin:0 8px 0 0}.ac{padding:14px 10px}.tools input{width:100%}}
+.ft td.dtl{min-width:170px;max-width:260px;white-space:pre-wrap;word-break:break-word}
+.ft td.dtl.has{background:#fef9c3;border-left:3px solid #eab308}
+.scn{padding:12px 14px;border-radius:12px;margin-bottom:12px;font-weight:700}.scn.ok{background:#dcfce7;color:#166534}.scn.bad{background:#fee2e2;color:#b91c1c}
+.kcp{margin:-4px 0 12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}.two .card{margin-bottom:18px}.two .fl{flex-direction:column;align-items:flex-start}.two .fl .oa{width:100%}.two .fl .oa .btn{flex:1;text-align:center}
+@media(max-width:820px){.two{grid-template-columns:1fr}}
+#mdl{position:fixed;inset:0;background:rgba(30,27,75,.5);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:25;padding:12px}
+.mb{position:relative;background:#fff;border-radius:20px;padding:22px;max-width:620px;width:100%;max-height:92vh;overflow:auto;text-align:center}
+.mb h3{margin:0 40px 12px 0;font-size:17px;text-align:left;word-break:break-word}.mx{position:absolute;top:12px;right:12px}
+.pvb{display:flex;flex-direction:column;gap:10px;align-items:center;margin-bottom:12px}.pvc{border:1px solid #e0e7ff;border-radius:6px;max-width:100%;height:auto}
+.mqr{display:inline-block;padding:10px;background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+#mdl .bcw svg{height:auto;max-width:100%}
+@media print{body.pm main,body.pm header,body.pm .blob{display:none!important}body.pm #mdl{position:static;background:#fff;backdrop-filter:none;display:block}body.pm .mb{max-height:none;overflow:visible}}
+.payb{display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:#f8faff;border:1px dashed #c7d2fe;border-radius:14px;padding:12px;margin:10px 0}.pqr{padding:8px;background:#fff;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08);flex:none}.pqr img{width:150px;display:block}.pbi{display:flex;flex-direction:column;gap:6px;align-items:flex-start;flex:1;min-width:180px}
+@media print{header,.blob,.noprint,#toast{display:none!important}body{background:#fff;animation:none}.card{box-shadow:none;border:1px solid #ccc}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== v2: responsive fixes, folders, per-file completion ===== */
+html{-webkit-text-size-adjust:100%}html,body{max-width:100%;overflow-x:hidden}
+img,canvas,svg,video{max-width:100%}
+header{flex-wrap:wrap;gap:8px;padding-top:max(12px,env(safe-area-inset-top))}
+#nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}#nav span{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+.fi b{white-space:normal;word-break:break-word}
+.bt{flex-wrap:wrap}.bt .btn{white-space:normal}
+.selbar{bottom:max(22px,env(safe-area-inset-bottom))}
+#toast{bottom:-120px}#toast.show{bottom:max(24px,env(safe-area-inset-bottom))}
+.ub{max-width:90vw}
+td{overflow-wrap:anywhere}
+tr.fdone{background:#f0fdf4}
+.dg{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chk{border:2px solid #e0e7ff;background:#fff;border-radius:20px;padding:6px 10px;font-weight:700;font-size:12px;cursor:pointer;color:#475569;font-family:inherit}
+.chk.on{background:#dcfce7;border-color:#16a34a;color:#166534}
+.crumb{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-bottom:12px;font-size:14px}
+.crumb button{border:0;background:#eef2ff;color:var(--b);font-weight:700;border-radius:8px;padding:7px 10px;cursor:pointer;font-family:inherit}
+.crumb span{color:var(--mut)}
+.fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:12px;margin-bottom:14px}
+.fld{display:flex;border:2px solid #e0e7ff;border-radius:14px;background:#fff;align-items:stretch;min-width:0;overflow:hidden;min-height:84px}
+.fld .fb{flex:1;display:flex;gap:10px;align-items:center;border:0;background:none;padding:12px;cursor:pointer;text-align:left;min-width:0;font-family:inherit;color:var(--ink);font-size:14px}
+.fld .fb:hover{background:#f5f3ff}
+.fic{font-size:28px;flex:none}.fn2{display:flex;flex-direction:column;min-width:0}.fn2 b{word-break:normal;overflow-wrap:break-word;line-height:1.3;font-size:15px}
+.fld .x{margin:auto 8px auto 0;flex:none}
+.fadd{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}.fadd input{flex:1 1 200px;margin:0}
+.mvs{width:auto;max-width:100%;margin:0;padding:8px;font-size:13px}
+.wh{font-weight:700;color:var(--p);margin:0 0 10px;font-size:14px;word-break:break-word}
+.hint{display:block;color:var(--p);font-weight:600;margin:-6px 0 8px}
+@media(max-width:820px){
+  /* orders table -> cards */
+  .ot table,.ot thead,.ot tbody,.ot tr,.ot td{display:block;min-width:0;width:100%}
+  .ot thead{display:none}
+  .ot tr.r{border-bottom:1px solid #eef0f6;padding:8px 12px}
+  .ot tr.r td{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border:0;text-align:right}
+  .ot tr.r td::before{content:attr(data-l);font-weight:700;color:var(--mut);font-size:12px;text-align:left;flex:none}
+  .ot tr.dt>td{padding:12px 10px}
+  /* files table -> cards */
+  .ft{overflow:visible;border:0;background:none}
+  .ft table,.ft thead,.ft tbody,.ft tfoot,.ft tr,.ft td{display:block;min-width:0;width:100%}
+  .ft thead{display:none}
+  .ft tbody tr{background:#fff;border:1px solid #e0e7ff;border-radius:14px;padding:8px 12px;margin-bottom:10px}
+  .ft tbody tr.fdone{background:#f0fdf4}
+  .ft tfoot tr{background:#f5f3ff;border-radius:14px;padding:8px 12px}
+  .ft td{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border:0;text-align:right;max-width:none}
+  .ft td::before{content:attr(data-l);font-weight:700;color:var(--mut);font-size:12px;text-align:left;flex:none}
+  .ft td:empty{display:none}
+  .ft td.dtl,.ft td.fn{max-width:none;min-width:0}
+  .ft td.dtl.has{border-left:3px solid #eab308;padding-left:8px}
+  .dg{justify-content:flex-end}
+  .tools>*{flex:1 1 100%}.tools .seg{width:100%}.tools .btn{flex:1 1 40%;text-align:center}
+  .sd{gap:6px}.sd .mi{padding:8px 10px;font-size:13px}.sd .mi:last-child{margin-left:auto}
+  .ah h2{font-size:22px}
+  .pgn{justify-content:center}
+  .fl>div:first-child{min-width:0;word-break:break-word}
+}
+@media(max-width:600px){
+  .ih{flex-wrap:wrap}.ih .fi{flex:1 1 55%}
+  .item{padding:12px}.oa>b{font-size:16px}
+  .mb{padding:16px}.ub{padding:24px 20px}
+  .oid{font-size:20px;letter-spacing:1px}
+  .pgn .pb button{min-width:30px;height:30px}
+  .selbar{gap:10px;font-size:13px}
+}
+@media(max-width:380px){
+  .sk b{font-size:22px}.lp{padding:20px 14px}.wt{font-size:24px}
+  .btn{padding:11px 14px}
+}
+.bk{background:linear-gradient(135deg,#f8faff,#f5f3ff);border:1px solid #e0e7ff;border-radius:14px;padding:10px 12px;margin-top:12px}
+.bk:empty{display:none}
+.bkh{font-weight:800;font-size:13px;color:var(--p);margin-bottom:8px}
+.bkr{display:grid;grid-template-columns:minmax(130px,1.2fr) 2fr auto auto;gap:4px 12px;align-items:center;padding:9px 12px;border-radius:10px;background:#fff;margin-bottom:6px;border-left:4px solid #a5b4fc;font-size:13px;box-shadow:0 2px 8px rgba(79,70,229,.06)}
+.bkr.c{border-left-color:#7c3aed}.bkr.b{border-left-color:#2563eb}.bkr.d{border-left-color:#a78bfa}
+.bkr .bl{font-weight:700;overflow-wrap:anywhere}.bkr .bd{color:var(--mut)}.bkr .bc2{color:var(--mut);white-space:nowrap}.bkr .ba{color:var(--p);font-size:16px;text-align:right;white-space:nowrap}
+.bkt{display:flex;justify-content:space-between;align-items:center;font-weight:800;padding:6px 12px 0}.bkt b{color:var(--p);font-size:20px}
+.bill{background:#f8faff;border:1px dashed #c7d2fe;border-radius:14px;padding:12px;margin:10px 0 14px}
+.bill .bkr{grid-template-columns:1fr auto}
+@media(max-width:600px){.bkr{grid-template-columns:1fr auto}.bkr .bl{grid-column:1;grid-row:1}.bkr .ba{grid-column:2;grid-row:1}.bkr .bd,.bkr .bc2{grid-column:1/-1}}
+
+/* ===== v3: colourful accents ===== */
+h2{display:flex;align-items:center;gap:10px}
+.sn{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--b),var(--p));color:#fff;font-size:14px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none;box-shadow:0 4px 10px rgba(124,58,237,.35)}
+.opt{border:2px solid #e0e7ff;border-top:5px solid #a5b4fc;border-radius:14px;padding:12px 12px 4px;background:#fff;min-width:0}
+.opt.xb{border-top-color:#2563eb;background:linear-gradient(180deg,#eff6ff,#fff 65%)}
+.opt.xc{border-top-color:#7c3aed;background:linear-gradient(180deg,#f5f3ff,#fff 65%)}
+.opt.xd{border-top-color:#a78bfa;background:linear-gradient(180deg,#faf5ff,#fff 65%)}
+.bk{background:linear-gradient(135deg,#eff6ff,#f5f3ff)}
+.slips{display:grid;gap:12px;text-align:center}
+.slip{border:2px dashed #c7d2fe;border-radius:14px;padding:14px;background:#fff;text-align:center;break-inside:avoid}
+.slip .sh{font-weight:800;font-size:16px}.slip .sid{font-size:22px;font-weight:800;letter-spacing:2px;color:var(--p);margin:4px 0;overflow-wrap:anywhere}
+.sgrid{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;margin:10px 0}
+.sgrid .bcw{margin:0}.sgrid svg{width:100%;height:auto}
+.sqr{display:inline-block;padding:6px;background:#fff}.sqr img{display:block}
+.sam{font-weight:800;margin:6px 0}
+@media(max-width:480px){.sgrid{grid-template-columns:1fr}}
+@media print{.slips{display:block}.slip{margin-bottom:10mm}}
+
+/* PH-FIX-CENTER */
+#rcpt{text-align:center}
+#rcpt h2{justify-content:center;text-align:center}
+#rcpt .big{margin:0 auto 12px}
+#rcpt .bcw{margin:10px auto}
+.ot tr.dt>td>.bcw{margin:0 auto 14px}
+.oc .bcw{margin-left:auto;margin-right:auto}
+.bcw,.bcn{text-align:center}
+@media(min-width:821px){
+  .ft table{min-width:1250px;table-layout:auto}
+  .ft td,.ft th{overflow-wrap:normal;word-break:normal}
+  .ft td.fn{min-width:240px;max-width:300px;overflow-wrap:anywhere}
+  .ft td[data-l="Pages to print"]{min-width:170px}
+  .ft td[data-l="Print type"],.ft td[data-l="Copies"],.ft td[data-l="Amount"],.ft td[data-l="Total"],.ft td[data-l="Print"]{white-space:nowrap}
+  .ft td[data-l="Completed?"]{min-width:190px}
+  .ft .btn,.ft .chk{white-space:nowrap}
+  .dg{flex-direction:column;align-items:flex-start}
+}
+/* PH-PAYLOCK */
+.claimed{background:#fef3c7;color:#b45309;animation:pulse 1.6s infinite}
+.lbl{font-weight:800;font-size:12px;letter-spacing:.5px;color:var(--p);margin:12px 0 4px;text-align:left}
+.slip .lbl{text-align:center}
+.paidbox,.clbox,.unbox{border-radius:12px;padding:10px 12px;margin:10px 0;text-align:left}
+.paidbox{background:#dcfce7;color:#166534;border:1px solid #86efac}
+.clbox{background:#fef9c3;color:#854d0e;border:1px solid #fde047}
+.unbox{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
+/* PH-BCTEXT */
+.bcc{font-size:12px;text-align:center;margin-top:4px;overflow-wrap:anywhere;line-height:1.4}
+.bcc small{color:var(--mut)}
+/* PH-AUTOPAY */
+.vb{margin-top:6px;font-size:12px;color:#b45309;font-weight:700;line-height:1.5}
+.vb .btn{margin-top:4px}
+/* PH-FORGOT */
+/* PH-FRIENDLY */
+/* PH-DESIGN2: tidy shop file list */
+.two{align-items:stretch!important}
+.two>.card{display:flex!important;flex-direction:column!important}
+.two>.card .drop{flex:1!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;min-height:220px}
+
+#shopf{max-height:480px;overflow-y:auto;padding-right:4px}
+
+.two .fl{display:flex!important;flex-direction:row!important;align-items:center!important;flex-wrap:nowrap!important;gap:12px!important;padding:12px 14px!important;background:#fff!important;border:1px solid #e0e7ff!important;margin:8px 0!important}
+.two .fl:hover{border-color:#7c3aed!important;box-shadow:0 6px 16px rgba(124,58,237,.12)}
+.two .fl>div:first-child{flex:1 1 auto!important;min-width:0!important;word-break:break-word}
+.two .fl .oa{width:auto!important;flex:none!important;flex-wrap:nowrap!important;margin:0!important}
+.two .fl .oa .btn{flex:none!important;width:auto!important;padding:8px 14px!important;font-size:13px!important;white-space:nowrap!important}
+
+.crumb{flex-wrap:nowrap!important;overflow-x:auto;white-space:nowrap}
+.crumb button{flex:none}
+
+@media(max-width:520px){
+  .two .fl{flex-wrap:wrap!important}
+  .two .fl .oa{width:100%!important}
+  .two .fl .oa .btn{flex:1!important}
+}
+</style></head><body>
+<div class="blob b1"></div><div class="blob b2"></div>
+<header><div class="logo" id="hl"></div><div id="nav"></div></header>
+<main id="app"></main><div id="toast"></div>
+<script>
+window.onerror=m=>{const a=document.getElementById('app');if(a&&!a.innerHTML.trim())a.innerHTML='<div class="card"><h2>⚠️ Error</h2><p>'+m+'</p></div>'};
+/* ========= CONFIG ========= */
+const SUPABASE_URL="https://xamwjqzsrjzgnqzsiiec.supabase.co";
+const SUPABASE_KEY="sb_publishable_m5Xlhlreqw8SpkLPWlilkw_3bjs-GtC";
+const ADMIN_EMAIL="pattanaikbiswajit07@gmail.com";
+const UPI_ID="8658846620@ibl";
+const SHOP_NAME="PrintHub";
+const SHOP_OWNER="Biswajit Pattanaik";   // shopkeeper name (can also be changed in Admin panel)
+const SHOP_PHONE="8658846620";           // shopkeeper phone (can also be changed in Admin panel)
+const RATE={color:4,bw:1.5,duplex:2};   // ₹ per page / per page / per SHEET (both sides)
+/* =========================== */
+const isAdmin=u=>!!u&&(u.email||'').trim().toLowerCase()===ADMIN_EMAIL.trim().toLowerCase();
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const REC=/type=recovery/.test(location.hash);
+let db=null;try{db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}catch(e){window.__err="Supabase library failed to load. Check internet and refresh."}
+const $=s=>document.querySelector(s),app=$('#app');
+let ADM=[],user=null,cart=[],tot=0,flt='all',chan=null,cfg={upi:UPI_ID,qr:null,owner:SHOP_OWNER,phone:SHOP_PHONE};
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500)};
+const showErr=m=>{const e=$('#autherr');if(e){e.textContent=m;e.classList.remove('hide')}toast(m)};
+const LOGO=s=>`<svg width="${s}" height="${s}" viewBox="0 0 48 48"><defs><linearGradient id="g${s}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs><rect width="48" height="48" rx="13" fill="url(#g${s})"/><rect x="15" y="8" width="18" height="12" rx="2" fill="#fff" opacity=".95"/><rect x="8" y="18" width="32" height="16" rx="5" fill="#fff"/><rect x="15" y="29" width="18" height="11" rx="2" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/><circle cx="34" cy="23" r="1.8" fill="#7c3aed"/></svg>`;
+$('#hl').innerHTML=LOGO(34)+'<span>PrintHub</span>';
+const rs=n=>'₹'+(+n).toFixed(2).replace(/\.00$/,'');
+const shopInfo=()=>{const d=(cfg.phone||'').replace(/\D/g,''),w=d.length===10?'91'+d:d,ini=esc((cfg.owner||'S').trim().charAt(0).toUpperCase());
+  return `<div class="shopc"><div class="av">${ini}</div><div class="si"><b>🏪 ${esc(SHOP_NAME)}</b><span>👤 ${esc(cfg.owner)} <em>· Shopkeeper</em></span><span><i class="ph">📞</i> ${esc(cfg.phone)}</span></div>
+  <div class="sb"><a class="btn sm" href="tel:${esc(cfg.phone)}"><i class="ph">📞</i> Call</a><a class="btn sm wa" href="https://wa.me/${w}" target="_blank" rel="noopener">💬 WhatsApp</a></div></div>`};
+const rates=()=>`<div class="rates"><span>🎨 Colour ${rs(RATE.color)}/page</span><span>⚫ B&W ${rs(RATE.bw)}/page</span><span>📄 Both-side B&W ${rs(RATE.duplex)}/sheet</span></div>`;
+const niceErr=e=>{const m=(e&&e.message)||String(e);
+  if(/failed to fetch|network/i.test(m))return'Cannot reach Supabase. Check internet and that the project is not paused.';
+  if(/invalid login/i.test(m))return'Wrong email or password (or sign up first).';
+  if(/not confirmed/i.test(m))return'Email not confirmed. Turn off "Confirm email" in Supabase → Authentication → Sign In / Providers.';
+  if(/column|schema cache/i.test(m))return'Database needs the update: run supabase_update.sql in Supabase SQL Editor. ('+m+')';
+  return m};
+const fixErr=e=>{const m=(e&&e.message)||String(e);return/shop_folders|folder_id|schema cache|relation|column/i.test(m)?'Run supabase_folders.sql in Supabase SQL Editor first. ('+m+')':niceErr(e)};
+async function loadCfg(){try{const {data}=await db.from('settings').select('*').eq('id',1).maybeSingle();if(data){cfg.upi=data.upi_id||UPI_ID;cfg.qr=data.qr_url||null;cfg.owner=data.shop_owner||SHOP_OWNER;cfg.phone=data.shop_phone||SHOP_PHONE}}catch(e){}}
+async function init(){
+  try{if(!db)throw new Error(window.__err);const {data}=await db.auth.getSession();user=data.session?.user||null;await loadCfg();
+    db.auth.onAuthStateChange((ev,s)=>{user=s?.user||null;if(ev==='SIGNED_OUT')route();if(ev==='PASSWORD_RECOVERY')recoverView()})}
+  catch(e){app.innerHTML=`<div class="card"><h2>⚠️ Problem</h2><p>${esc(niceErr(e))}</p></div>`;return}
+  REC?recoverView():route();
+}
+function route(){
+  if(chan){try{db.removeChannel(chan)}catch(e){}chan=null}
+  $('#nav').innerHTML=user?`<span class="mut" style="margin-right:8px">${esc((user.email||'').split('@')[0])}</span><button class="btn sm" onclick="logout()">🚪 Logout</button>`:'';
+  document.querySelector('header').style.display=user&&!isAdmin(user)?'':'none';app.className=user&&isAdmin(user)?'wide':'';
+  if(!user)return authView();isAdmin(user)?adminView():studentView();
+}
+/* ---------- AUTH ---------- */
+const PRN=`<div class="prn"><div class="pbody"><div class="slot"></div><i class="led"></i><span class="pl">PRINTING…</span></div><div class="sheet"><s style="background:var(--p)"></s><s style="background:var(--b)"></s><s></s><s></s></div><i class="fi1">📄</i><i class="fi2">🎨</i><i class="fi3">🛒</i><i class="fi4">⭐</i></div>`;
+function authView(mode='login'){
+  const adm=mode==='admin',sg=mode==='signup',fg=mode==='forgot';
+  let rem='';try{rem=localStorage.getItem('ph_em')||''}catch(e){}
+  const title=fg?'Reset password':adm?'Admin Login':sg?'Create account':'Welcome Back!';
+  const sub=fg?'We will email you a reset link.':adm?'Shop owner access to orders and payments.':sg?'Fill in your details to start printing.':'Please log in to your account.';
+  const [p1,p2,b2,f2]=fg?['📧 Send reset link','forgot()','← Back',"authView('login')"]:adm?['🛠️ Login as Admin','adminLogin()','Create admin account','adminSignup()']:sg?['📝 Sign up','signup()','← Back to login',"authView('login')"]:['🔑 Login','login()','📝 Create account',"authView('signup')"];
+  app.innerHTML=`<div class="auth"><div class="split"><div class="lp">
+  <div class="lg0">${LOGO(34)}<span>PrintHub</span></div>
+  <h1 class="wt">${title}</h1><p class="mut" style="margin:0 0 16px">${sub}</p>
+  ${fg?'':`<div class="tabs"><button class="${!adm?'on':''}" onclick="authView('login')">🎓 Student</button><button class="${adm?'on':''}" onclick="authView('admin')">🛠️ Admin</button></div>`}
+  <div class="onlym">${rates()}${shopInfo()}</div>
+  <div id="autherr" class="err hide"></div>
+  ${sg?`<label>👤 Full name</label><input id="nm"><label>📞 Phone</label><input id="ph" type="tel"><label>🏫 Class / Roll no.</label><input id="cl">`:''}
+  <label>✉️ Email address</label><input id="em" type="email" autocomplete="email" value="${esc(sg?'':rem)}">
+  ${fg?'':`<label>🔒 Password (min 6)</label><div class="pw"><input id="pw" type="password" onkeydown="if(event.key==='Enter')$('#authbtn').click()"><button type="button" class="eye" id="eye" onclick="eye()">👁️</button></div>`}
+  ${fg||sg?'':`<div class="rf"><label class="rm"><input type="checkbox" id="rm" ${rem?'checked':''}> Remember me</label><a href="#" onclick="authView('forgot');return false" style="color:#ef4444;font-size:13px">Forgot password?</a></div>`}
+  <div class="bt"><button class="btn" id="authbtn" onclick="${p2}">${p1}</button><button class="btn out" onclick="${f2}">${b2}</button></div>
+  <p class="terms">By signing up you agree to our terms and that you have read our data policy.</p></div>
+  <div class="rp"><div class="rg"><b>Print without the queue.</b><span>Upload PDFs, pick pages, pay by UPI or cash.</span></div>${PRN}${rates()}<div class="gl">${shopInfo()}</div></div>
+  <button class="seam" title="Switch ${adm?'to Student':'to Admin'}" onclick="authView('${adm?'login':'admin'}')">▶</button></div></div>`;
+}
+async function forgot(){const em=$('#em').value.trim().toLowerCase();if(!em)return showErr('Enter your email');
+  try{const {error}=await db.auth.resetPasswordForEmail(em,{redirectTo:location.href.split('#')[0]});if(error)throw error;toast('📧 Reset link sent. Check your email.')}catch(e){showErr(niceErr(e))}}
+function recoverView(){app.innerHTML=`<div class="auth"><div class="card" style="max-width:420px;width:100%"><h2>🔒 Set new password</h2><input id="np" type="password" placeholder="New password (min 6)"><button class="btn" style="width:100%" onclick="saveNp()">Save password</button></div></div>`}
+async function saveNp(){const p=$('#np').value;if(p.length<6)return toast('Min 6 characters');const {error}=await db.auth.updateUser({password:p});if(error)return toast(niceErr(error));toast('✅ Password updated');route()}
+const pie=(title,parts,fmt)=>{const T=parts.reduce((s,p)=>s+p.v,0),R=25,C=2*Math.PI*R;let off=0;
+  const seg=T?parts.filter(p=>p.v>0).map(p=>{const l=p.v/T*C,e=`<circle r="${R}" cx="50" cy="50" fill="none" stroke="${p.c}" stroke-width="50" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-off}" style="animation:dsh 1s var(--e) both"/>`;off+=l;return e}).join(''):`<circle r="${R}" cx="50" cy="50" fill="none" stroke="#e0e7ff" stroke-width="50"/>`;
+  return `<div class="pc"><b>${title}</b><svg viewBox="0 0 100 100" class="pie"><g transform="rotate(-90 50 50)">${seg}</g><circle r="49" cx="50" cy="50" fill="none" stroke="#fff" stroke-width="2"/></svg><div class="lg">${parts.map(p=>`<div><i style="background:${p.c}"></i>${p.l}: <b>${fmt(p.v)}</b>${T?` (${Math.round(p.v/T*100)}%)`:''}</div>`).join('')}</div>${T?'':'<div class="mut" style="font-size:12px">No data yet</div>'}</div>`};
+/* ---- copies per print type ---- */
+let SHOPF=[],FOLD=[],curF=null;
+const cp=(x,t)=>x.mode==='custom'?(+x['k'+t]||+x.copies||1):(+x.copies||1);
+const copyLbl=x=>x.mode==='custom'?`🎨×${cp(x,'c')} ⚫×${cp(x,'b')} 📄×${cp(x,'d')}`:`× ${x.copies||1}`;
+const stp=(i,k,v)=>`<div class="cp kcp"><span>🔢 Copies</span><div class="step"><button onclick="stepK(${i},'${k}',-1)">−</button><input type="number" min="1" value="${v}" oninput="setF(${i},'${k}',this.value)"><button onclick="stepK(${i},'${k}',1)">+</button></div></div>`;
+function stepK(i,k,d){cart[i][k]=Math.max(1,(+cart[i][k]||1)+d);drawCart()}
+/* ---- per-file / per-option completion helpers ---- */
+const KEYS=x=>{const k=['c','b','d'].filter(q=>+x[q]>0);return k.length?k:['a']};
+const optDone=(o,x,k)=>o.status==='done'||!!(x.dn&&x.dn[k]);
+const fileDone=(o,x)=>KEYS(x).every(k=>optDone(o,x,k));
+const OPT_L={c:'🎨 Colour',b:'⚫ B&W',d:'📄 Both-side',a:'🖨️ Print'};
+/* ---- Amount-locked barcode: ORDERNO.PAISE.CHECK  (e.g. PH-261118-AB12.13500.K7Q) ---- */
+const LOCK_SALT="PH-LOCK-2026";
+const lockHash=(no,p)=>{let h=7;const t=no+'|'+p+'|'+LOCK_SALT;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))%46656;return h.toString(36).toUpperCase().padStart(3,'0')};
+const LOCKS={};function regLocks(a){(a||[]).forEach(o=>{if(o&&o.order_no&&o.pay_lock)LOCKS[o.order_no+'|'+Math.round(+o.amount*100)]=o.pay_lock})}
+const lockCode=(no,a)=>{const p=Math.round(+a*100),s=LOCKS[no+'|'+p];return `${no}.${p}.${s||lockHash(no,p)}`};
+const parseLock=raw=>{const m=/^(PH-\d{6}-[A-Z0-9]{4})\.(\d+)\.([A-Z0-9]{3,12})$/i.exec(raw||'');return m?{no:m[1].toUpperCase(),paise:+m[2],chk:m[3].toUpperCase()}:null};
+function scanBanner(sc){if(!sc)return'';
+  const o=ADM.find(x=>x.order_no===sc.no);
+  if(!o)return`<div class="scn bad">⛔ Barcode read, but no order ${esc(sc.no)} found.</div>`;
+  const real=Math.round(+o.amount*100);
+  if(sc.chk!==lockHash(sc.no,sc.paise))return`<div class="scn bad">⛔ FAKE / EDITED barcode – checksum is wrong. Do not accept.</div>`;
+  if(sc.paise!==real)return`<div class="scn bad">⛔ AMOUNT MISMATCH – barcode says ${rs(sc.paise/100)} but the order says ${rs(o.amount)}.</div>`;
+  return`<div class="scn ok">✅ Verified · ${esc(sc.no)} · amount locked at <b>${rs(o.amount)}</b> · ${esc(o.pay_status)}</div>`}
+function barcodes(){if(!window.JsBarcode)return;document.querySelectorAll('svg.bc').forEach(el=>{try{JsBarcode(el,el.dataset.code,{format:'CODE128',height:44,displayValue:false,margin:0,width:1.3})}catch(e){}})}
+function fq(){const q=($('#q')?.value||'').trim().toLowerCase();document.querySelectorAll('#tb .oc').forEach(c=>c.style.display=!q||(c.dataset.s||'').includes(q)?'':'none')}
+function eye(){const i=$('#pw');i.type=i.type==='password'?'text':'password';$('#eye').textContent=i.type==='password'?'👁️':'🙈'}
+async function doLogin(email,pw,needAdmin){
+  const b=$('#authbtn');if(!email||!pw)return showErr('Enter email and password');
+  if(needAdmin&&email!==ADMIN_EMAIL.trim().toLowerCase())return showErr('⛔ This email is not the admin');
+  b.disabled=true;const old=b.textContent;b.textContent='Please wait…';
+  try{const {data,error}=await db.auth.signInWithPassword({email,password:pw});if(error)throw error;user=data.user;try{const r=$('#rm');r&&r.checked?localStorage.setItem('ph_em',email):localStorage.removeItem('ph_em')}catch(e){}route()}
+  catch(e){showErr(niceErr(e));b.disabled=false;b.textContent=old}
+}
+const adminLogin=()=>doLogin($('#em').value.trim().toLowerCase(),$('#pw').value,true);
+const login=()=>doLogin($('#em').value.trim().toLowerCase(),$('#pw').value,false);
+async function adminSignup(){
+  const em=$('#em').value.trim().toLowerCase();
+  if(em!==ADMIN_EMAIL.trim().toLowerCase())return showErr('⛔ Only the admin email can be used');
+  if($('#pw').value.length<6)return showErr('Password must be at least 6 characters');
+  try{const {data,error}=await db.auth.signUp({email:em,password:$('#pw').value,options:{data:{name:'Admin'}}});if(error)throw error;
+    if(data.session){user=data.user;return route()}toast('Admin account created. Now login.')}catch(e){showErr(niceErr(e))}
+}
+async function signup(){
+  const em=$('#em').value.trim().toLowerCase();if(!em||$('#pw').value.length<6)return showErr('Enter email and a password of at least 6 characters');
+  try{const {data,error}=await db.auth.signUp({email:em,password:$('#pw').value,options:{data:{name:$('#nm').value,phone:$('#ph').value,class:$('#cl').value}}});if(error)throw error;
+    if(data.session){user=data.user;return route()}toast('Account created! Now login.');authView('login')}catch(e){showErr(niceErr(e))}
+}
+async function logout(){try{await db.auth.signOut()}catch(e){}user=null;cart=[];route()}
+
+/* ---------- FOLDERS (shared by student + admin) ---------- */
+async function loadFolders(){try{const {data,error}=await db.from('shop_folders').select('*').order('name');FOLD=error?[]:(data||[])}catch(e){FOLD=[]}}
+const kids=id=>FOLD.filter(f=>(f.parent_id||null)===id);
+const deep=id=>[id,...kids(id).flatMap(f=>deep(f.id))];
+const cntIn=id=>{const d=deep(id);return SHOPF.filter(f=>d.includes(f.folder_id)).length+d.length-1};
+const fpath=id=>{const a=[];let f=FOLD.find(x=>x.id===id),g=0;while(f&&g++<20){a.unshift(f);const pid=f.parent_id;f=FOLD.find(x=>x.id===pid)}return a};
+const fname=id=>fpath(id).map(f=>f.name).join(' › ');
+function openF(id){curF=id||null;const q=$('#sfq');if(q)q.value='';shopRender()}
+function shopRender(){const a=$('#sfList'),s=$('#shopf');if(a)a.innerHTML=shopHtml(1);if(s)s.innerHTML=shopHtml(0);
+  const w=$('#sfWhere');if(w)w.textContent='📍 Current location: '+(fname(curF)||'All files (main)')}
+function shopHtml(adm){
+  const q=($('#sfq')?.value||'').trim().toLowerCase();
+  const mv=adm?`<option value="">📁 Move to…</option><option value="root">🏠 All files (main)</option>`+FOLD.map(x=>`<option value="${x.id}">${esc(fname(x.id))}</option>`).join(''):'';
+  const row=f=>`<div class="fl"><div>📄 <b>${esc(f.name)}</b><br><small>${f.pages||'?'} pages${f.descr?' · '+esc(f.descr):''}${f.folder_id&&(q||adm)?' · 📁 '+esc(fname(f.folder_id)):''}${adm?' · '+new Date(f.created_at).toLocaleDateString():''}</small></div>
+    <div class="oa" style="margin:0">${adm?`<a class="btn sm ghost" href="${esc(f.url)}" target="_blank" rel="noopener">👁️ Open</a>${FOLD.length?`<select class="mvs" onchange="moveFile('${f.id}',this.value)">${mv}</select>`:''}<button class="btn sm del" onclick="delShop('${f.id}')">🗑️ Remove</button>`
+    :`<button class="btn sm ghost" onclick="prevShop('${f.id}')">👁️ View</button><button class="btn sm" onclick="addShop('${f.id}')">➕ Print this</button>`}</div></div>`;
+  if(q&&!adm){const m=SHOPF.filter(f=>(f.name+' '+(f.descr||'')+' '+fname(f.folder_id)).toLowerCase().includes(q));return m.length?m.map(row).join(''):'<small class="mut">No file matches your search.</small>'}
+  const subs=kids(curF),files=SHOPF.filter(f=>(f.folder_id||null)===curF);
+  let h='';
+  if(FOLD.length||curF){const par=curF?(FOLD.find(x=>x.id===curF)||{}).parent_id||null:null;
+    h+=`<div class="crumb">${curF?`<button onclick="openF(${par?`'${par}'`:'null'})">⬅ Back</button>`:''}<button onclick="openF(null)">🏠 All files</button>${fpath(curF).map(f=>`<span>›</span><button onclick="openF('${f.id}')">${esc(f.name)}</button>`).join('')}</div>`}
+  if(subs.length)h+=`<div class="fg">${subs.map(f=>{const n=cntIn(f.id);return `<div class="fld"><button class="fb" onclick="openF('${f.id}')"><span class="fic">📁</span><span class="fn2"><b>${esc(f.name)}</b><small>${n} item${n===1?'':'s'}</small></span></button>${adm?`<button class="x" title="Delete folder" onclick="delFolder('${f.id}')">🗑</button>`:''}</div>`}).join('')}</div>`;
+  h+=files.map(row).join('');
+  if(!subs.length&&!files.length)h+=`<small class="mut">${curF?'This folder is empty.':adm?'No files added yet.':'The shopkeeper has not added any ready files yet. You can upload your own PDF too.'}</small>`;
+  return h}
+
+/* ---------- STUDENT ---------- */
+const MODES=[['bw','⚫ B&W'],['color','🎨 Colour'],['duplex','📄 Both-side'],['custom','✏️ Custom']];
+function studentView(){
+  const m=user.user_metadata||{};
+  app.innerHTML=`<div class="card"><div class="brand">${LOGO(48)}<div><h2 style="margin:0">Hi ${esc(m.name||'Student')} 🎓</h2><small>PrintHub student portal</small></div></div>${rates()}${shopInfo()}</div>
+  <div class="two"><div class="card"><h2><span class="sn">1</span>Upload PDF(s)</h2><div class="drop" id="drop" onclick="$('#file').click()"><div>📄</div><br><b>Tap to choose PDFs — you can add many</b></div>
+   <input type="file" id="file" accept="application/pdf" multiple class="hide"></div>
+   <div class="card"><h2>📚 Ready files from the shop</h2><input id="sfq" placeholder="🔍 Search ready files…" oninput="shopRender()"><div id="shopf">Loading…</div></div></div>
+  <div id="cartc" class="card hide"><h2><span class="sn">2</span>Your files &amp; print type</h2><div id="cart"></div></div>
+  <div id="payc" class="card hide"><h2><span class="sn">3</span>Message to shop (optional)</h2><textarea id="note" rows="2" placeholder="e.g. Please staple, need by 5 PM…"></textarea>
+   <h2><span class="sn">4</span>Pay</h2><div id="bill"></div><div class="total" id="tot"></div>
+   <div class="pay"><label><input type="radio" name="pm" value="UPI" checked onchange="payUI()">📱 UPI / Scan QR</label><label><input type="radio" name="pm" value="Cash" onchange="payUI()">💵 Cash at shop</label></div><br>
+   <div id="upi" style="text-align:center"><div id="qr"></div><p>UPI ID: <b>${esc(cfg.upi)}</b><br><small>Scan &amp; pay, then place order.</small></p></div>
+   <button class="btn" id="go" style="width:100%" onclick="placeOrder()">✅ Place order</button></div>
+  <div class="card"><h2>🧾 My orders</h2><div id="mine">Loading…</div></div>`;
+  const f=$('#file'),d=$('#drop');f.onchange=()=>{const arr=Array.from(f.files);f.value='';addFiles(arr)};
+  d.ondragover=e=>{e.preventDefault();d.classList.add('on')};d.ondragleave=()=>d.classList.remove('on');
+  d.ondrop=e=>{e.preventDefault();d.classList.remove('on');addFiles(Array.from(e.dataTransfer.files))};
+  curF=null;drawCart();myOrders();loadShop();
+  if(chan){try{db.removeChannel(chan)}catch(e){}chan=null}
+  chan=db.channel('mine').on('postgres_changes',{event:'*',schema:'public',table:'orders',filter:`user_id=eq.${user.id}`},myOrders).subscribe();
+}
+async function loadShop(){const el=$('#shopf');if(!el)return;
+  await loadFolders();
+  const {data,error}=await db.from('shop_files').select('*').order('created_at',{ascending:false});
+  SHOPF=error?[]:(data||[]);shopRender()}
+function addShop(id){const f=SHOPF.find(x=>x.id===id);if(!f)return;
+  cart.push({url:f.url,name:f.name,pages:f.pages||1,mode:'bw',sel:'all',pr:'',sb:'',co:'',du:'',dt:'',kc:1,kb:1,kd:1,copies:1});
+  drawCart();toast('➕ Added – choose pages & print type below');const c=$('#cartc');if(c)c.scrollIntoView({behavior:'smooth'})}
+async function addFiles(fs){
+  for(const file of fs){
+    if(file.type!=='application/pdf'&&!/\.pdf$/i.test(file.name)){toast('Only PDF files: '+file.name);continue}
+    try{const doc=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+      cart.push({file,name:file.name,pages:doc.numPages,mode:'bw',sel:'all',pr:'',sb:'',co:'',du:'',dt:'',kc:1,kb:1,kd:1,copies:1})}catch(e){toast('Cannot read '+file.name)}
+  }drawCart();
+}
+/* Page list parser: accepts 1-3,6-8 | 1–3, 6–8 | 1 to 3 ; 6 to 8 | 5- (to end) | 8-6 | all */
+function parse(s,n,bad){s=String(s||'').trim().toLowerCase();const o=new Set();if(!s||s==='none')return o;
+  if(s==='all'){for(let i=1;i<=n;i++)o.add(i);return o}
+  s=s.replace(/[–—−‒~]/g,'-').replace(/\bto\b/g,'-').replace(/\s*-\s*/g,'-').replace(/[\s;،、.\/&+]+/g,',').replace(/\band\b/g,',');
+  s.split(',').forEach(p=>{if(!p)return;const m=p.split('-').map(x=>parseInt(x));let a=m[0],b=m.length>1?m[1]:m[0];if(!a)return;if(m.length>1&&isNaN(b))b=n;if(a>b){const t=a;a=b;b=t}
+    for(let i=Math.max(a,1);i<=Math.min(b,n+500);i++){if(i<=n)o.add(i);else if(bad)bad.push(i)}});return o}
+/* each option (Colour / B&W / Both-side) is priced on its OWN pages and its OWN copies */
+function calcItem(it){const n=it.pages;let c=0,d=0,b=0,np,ov=0;const bad=[];
+  if(it.mode==='custom'){const A=parse(it.co,n,bad),D=parse(it.du,n,bad),B=parse(it.sb,n,bad);c=A.size;d=D.size;b=B.size;
+    np=new Set([...A,...D,...B]).size;ov=c+d+b-np;
+    it.amt=c*(it.kc||1)*RATE.color+b*(it.kb||1)*RATE.bw+Math.ceil(d/2)*(it.kd||1)*RATE.duplex}
+  else{const S=it.sel==='range'?parse(it.pr,n,bad):parse('all',n);np=S.size;if(it.mode==='color')c=np;else if(it.mode==='duplex')d=np;else b=np;
+    it.amt=(c*RATE.color+b*RATE.bw+Math.ceil(d/2)*RATE.duplex)*it.copies}
+  it.np=np;it.c=c;it.d=d;it.b=b;it.ov=ov;it.bad=[...new Set(bad)].sort((x,y)=>x-y)}
+const bkRows=it=>{const k=it.mode==='custom'?{c:it.kc,b:it.kb,d:it.kd}:{c:it.copies,b:it.copies,d:it.copies},R=[];
+  if(it.c)R.push(['c','🎨 Colour',`${it.c} page${it.c>1?'s':''} × ${rs(RATE.color)}`,k.c,it.c*RATE.color*k.c]);
+  if(it.b)R.push(['b','⚫ B&amp;W single-side',`${it.b} page${it.b>1?'s':''} × ${rs(RATE.bw)}`,k.b,it.b*RATE.bw*k.b]);
+  if(it.d){const sh=Math.ceil(it.d/2);R.push(['d','📄 B&amp;W both-side',`${it.d} page${it.d>1?'s':''} = ${sh} sheet${sh>1?'s':''} × ${rs(RATE.duplex)}`,k.d,sh*RATE.duplex*k.d])}
+  return R};
+const bkHtml=it=>{const R=bkRows(it);if(!R.length)return'';return `<div class="bkh">🧮 Price breakdown</div>`+R.map(r=>`<div class="bkr ${r[0]}"><span class="bl">${r[1]}</span><span class="bd">${r[2]}</span><span class="bc2">× ${r[3]} cop${r[3]>1?'ies':'y'}</span><b class="ba">${rs(r[4])}</b></div>`).join('')+`<div class="bkt"><span>File total</span><b>${rs(it.amt)}</b></div>`};
+const billHtml=()=>!cart.length?'':`<div class="bill"><div class="bkh">🧾 Your bill</div>${cart.map(it=>`<div class="bkr"><span class="bl">📄 ${esc(it.name)}</span><b class="ba">${rs(it.amt)}</b></div>`).join('')}</div>`;
+function drawCart(){
+  $('#cartc').classList.toggle('hide',!cart.length);$('#payc').classList.toggle('hide',!cart.length);
+  $('#cart').innerHTML=cart.map((it,i)=>`<div class="item"><div class="ih"><div class="pdfi">PDF</div><div class="fi"><b>${esc(it.name)}</b><small>${it.pages} pages in file</small></div><button class="btn sm ghost" onclick="prevCart(${i})">👁️ Preview</button><button class="x" onclick="rmItem(${i})">✕</button></div>
+  ${it.mode==="custom"?'':`<div class="lb">📑 Pages to print</div>
+  <div class="seg g2"><button class="${it.sel==='all'?'on':''}" onclick="setF(${i},'sel','all',1)">📚 All pages</button><button class="${it.sel==='range'?'on':''}" onclick="setF(${i},'sel','range',1)">🔢 Select pages</button></div>
+  ${it.sel==='range'?`<input value="${esc(it.pr)}" placeholder="e.g. 4,5,6 or 5-6 or 1-3,6-8" oninput="setF(${i},'pr',this.value)" style="margin-top:0"><small id="n${i}"></small>`:''}`}
+  <div class="lb">🖨️ Print type</div>
+  <div class="seg g4">${MODES.map(([k,l])=>`<button class="${it.mode===k?'on':''}" onclick="setF(${i},'mode','${k}',1)">${l}</button>`).join('')}</div>
+  ${it.mode==='custom'?`<div class="row"><div class="opt xb"><label>⚫ Single-side B&amp;W pages</label><input value="${esc(it.sb)}" placeholder="e.g. 4,5,6 or 1-3,6-8" oninput="setF(${i},'sb',this.value)">${stp(i,'kb',it.kb)}<small class="hint" id="hb${i}"></small></div><div class="opt xc"><label>🎨 Colour pages</label><input value="${esc(it.co)}" placeholder="e.g. 1-3,7" oninput="setF(${i},'co',this.value)">${stp(i,'kc',it.kc)}<small class="hint" id="hc${i}"></small></div><div class="opt xd"><label>📄 Both-side B&amp;W pages</label><input value="${esc(it.du)}" placeholder="e.g. 4,5 or 8-11" oninput="setF(${i},'du',this.value)">${stp(i,'kd',it.kd)}<small class="hint" id="hd${i}"></small></div></div><small id="n${i}"></small>`:''}
+  <div class="lb">📝 Details for this file (optional)</div><textarea rows="2" placeholder="e.g. Staple it, spiral binding, print on page 3 only in colour…" oninput="setF(${i},'dt',this.value)" style="margin-top:0">${esc(it.dt)}</textarea>
+  <div class="bk" id="bk${i}"></div><div class="ib">${it.mode==='custom'?'<small>Each print type has its own pages &amp; copies ☝️</small>':`<div class="cp"><span>🔢 Copies</span><div class="step"><button onclick="step(${i},-1)">−</button><input type="number" min="1" value="${it.copies}" oninput="setF(${i},'copies',this.value)"><button onclick="step(${i},1)">+</button></div></div>`}<div class="pr"><small id="d${i}"></small><b id="a${i}"></b></div></div></div>`).join('');
+  upCart();
+}
+function step(i,d){cart[i].copies=Math.max(1,cart[i].copies+d);drawCart()}
+function rmItem(i){cart.splice(i,1);drawCart()}
+function setF(i,k,v,redraw){cart[i][k]=['copies','kc','kb','kd'].includes(k)?Math.max(1,+v||1):v;redraw?drawCart():upCart()}
+function upCart(){tot=0;cart.forEach((it,i)=>{calcItem(it);tot+=it.amt;{const bk=$('#bk'+i);if(bk)bk.innerHTML=bkHtml(it)}const a=$('#a'+i),dd=$('#d'+i),nn=$('#n'+i);if(a)a.textContent=rs(it.amt);if(dd)dd.textContent=it.mode==='custom'?`🎨${it.c}×${it.kc}  ⚫${it.b}×${it.kb}  📄${it.d}×${it.kd}`:`🎨${it.c}  ⚫${it.b}  📄${it.d}`;
+  if(nn)nn.textContent=it.np?`${it.np} of ${it.pages} pages selected`+(it.bad.length?` · ⚠️ Page ${it.bad.slice(0,6).join(', ')}${it.bad.length>6?'…':''} ${it.bad.length>1?'do':'does'} not exist (this file has only ${it.pages} pages) – ignored`:'')+(it.ov?` · ℹ️ ${it.ov} page(s) are in more than one option – each option is charged separately`:''):'⚠️ Enter page numbers (e.g. 4,5,6 or 1-3,6-8)';
+  if(it.mode==='custom'){const H=(k,t)=>{const e=$('#h'+k+i);if(e)e.textContent=t};
+    H('c',`${it.c} pg × ${it.kc} = ${rs(it.c*it.kc*RATE.color)}`);H('b',`${it.b} pg × ${it.kb} = ${rs(it.b*it.kb*RATE.bw)}`);H('d',`${it.d} pg = ${Math.ceil(it.d/2)} sheet × ${it.kd} = ${rs(Math.ceil(it.d/2)*it.kd*RATE.duplex)}`)}});
+  const bl=$('#bill');if(bl)bl.innerHTML=billHtml();const t=$('#tot');if(t)t.textContent=`Total: ${rs(tot)}  (${cart.length} file${cart.length>1?'s':''})`;payUI()}
+function payUI(){
+  const r=document.querySelector('[name=pm]:checked');if(!r)return;const upi=r.value==='UPI';$('#upi').classList.toggle('hide',!upi);
+  if(!upi||!cart.length)return;$('#qr').innerHTML='';
+  if(cfg.qr)$('#qr').innerHTML=`<img src="${esc(cfg.qr)}" style="width:200px;max-width:100%;border-radius:8px"><div class="mut" style="font-size:13px">Pay ${rs(tot)}</div>`;
+  else if(window.QRCode)new QRCode($('#qr'),{text:`upi://pay?pa=${cfg.upi}&pn=${encodeURIComponent(SHOP_NAME)}&am=${tot}&cu=INR`,width:170,height:170,colorDark:'#4c1d95'});
+}
+const upl=m=>{let o=$('#upl');if(!o){o=document.createElement('div');o.id='upl';document.body.appendChild(o)}o.innerHTML=`<div class="ub"><div class="spin"></div><b>${m}</b></div>`};
+const uplOff=()=>{const o=$('#upl');if(o)o.remove()};
+async function placeOrder(){
+  if(!cart.length)return toast('Add a PDF first');
+  const bad=cart.find(x=>!x.np);if(bad)return toast('Enter page numbers for '+bad.name);
+  const b=$('#go');b.disabled=true;upl('Uploading your PDF(s)…');
+  try{
+    const items=[];
+    for(const it of cart){const path=`${user.id}/${Date.now()}_${it.name.replace(/[^\w.]/g,'_')}`;
+      let url=it.url;if(!url){const up=await db.storage.from('pdfs').upload(path,it.file);if(up.error)throw up.error;url=db.storage.from('pdfs').getPublicUrl(path).data.publicUrl}
+      items.push({name:it.name,url,pages:it.np,tp:it.pages,pr:it.mode!=='custom'&&it.sel==='range'?it.pr:'',mode:it.mode,co:it.co,du:it.du,sb:it.sb,copies:it.mode==='custom'?1:it.copies,kc:it.kc,kb:it.kb,kd:it.kd,c:it.c,b:it.b,d:it.d,amt:it.amt,dt:(it.dt||'').trim()})}
+    const m=user.user_metadata||{},pm=document.querySelector('[name=pm]:checked').value;
+    const no='PH-'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
+    const sum=k=>items.reduce((s,x)=>s+x[k],0);
+    const row={user_id:user.id,name:m.name,phone:m.phone,class:m.class,email:user.email,order_no:no,note:($('#note').value||'').trim()||null,items,
+      file_name:items[0].name+(items.length>1?` +${items.length-1} more`:''),file_url:items[0].url,total_pages:sum('pages'),color_pages:sum('c'),bw_pages:sum('b'),duplex_pages:sum('d'),copies:1,amount:tot,pay_method:pm};
+    const {data:ins,error}=await db.from('orders').insert(row).select('pay_lock,amount').single();if(!error&&ins){row.amount=ins.amount;row.pay_lock=ins.pay_lock;regLocks([row])}if(error)throw error;
+    cart=[];uplOff();thanks(row);
+  }catch(e){uplOff();b.disabled=false;toast(niceErr(e))}
+}
+function thanks(o){
+  const cash=o.pay_method==='Cash';
+  app.innerHTML=`<div class="card" id="rcpt" style="max-width:560px;margin:auto;text-align:center"><div class="big">✓</div><h2>Thank you, ${esc(o.name||'Student')}! 🎉</h2><p class="mut">Your order is placed.</p>
+  <div class="oid">${o.order_no}</div><div class="bcw" style="max-width:300px;margin:8px auto"><svg class="bc" data-code="${lockCode(o.order_no,o.amount)}"></svg></div><div class="bcn">🔒 Amount locked: ${rs(o.amount)}</div><small>🆔 Order ID – show this barcode at the shop</small>
+  <table style="margin:14px 0">${o.items.map(x=>`<tr><td>📄 ${esc(x.name)}<br><small>${x.pages} pg${x.pr?' ('+esc(x.pr)+')':''} ${copyLbl(x)} · 🎨${x.c} ⚫${x.b} 📄${x.d}</small>${x.dt?`<br><small>📝 ${esc(x.dt)}</small>`:''}</td><td style="text-align:right">${rs(x.amt)}</td></tr>`).join('')}
+  <tr><td><b>Total</b></td><td style="text-align:right"><b>${rs(o.amount)}</b></td></tr>
+  <tr><td>Payment</td><td style="text-align:right">${cash?'💵 Cash at shop':'📱 UPI'}</td></tr></table>
+  <p>${cash?'Please pay cash at the counter.':'The shop will confirm your UPI payment.'}</p>${o.note?`<p class="mut">💬 ${esc(o.note)}</p>`:''}
+  <p class="mut">🏪 ${esc(SHOP_NAME)} · 👤 ${esc(cfg.owner)} · 📞 ${esc(cfg.phone)}</p><small>${new Date().toLocaleString()}</small><div class="noprint" style="margin-top:14px"><button class="btn" onclick="window.print()">🖨️ Print receipt</button> <button class="btn ghost" onclick="studentView()">➕ New order</button></div></div>`;
+  barcodes();scrollTo(0,0);
+}
+/* ---- modal + previews ---- */
+function modal(h){let o=$('#mdl');if(!o){o=document.createElement('div');o.id='mdl';o.onclick=e=>{if(e.target===o)closeM()};document.body.appendChild(o)}
+  o.innerHTML=`<div class="mb"><button class="x mx noprint" onclick="closeM()">✕</button>${h}</div>`}
+const closeM=()=>{const o=$('#mdl');if(o)o.remove()};
+async function pdfPrev(url,name){
+  modal(`<h3>👁️ ${esc(name)}</h3><div id="pvb" class="pvb">Loading preview…</div><a class="btn sm noprint" href="${esc(url)}" target="_blank" rel="noopener">⬇️ Open in new tab</a>`);
+  try{const doc=await pdfjsLib.getDocument({url}).promise,n=Math.min(doc.numPages,40),dpr=window.devicePixelRatio||1;
+    let box=$('#pvb');if(!box)return;box.innerHTML='';
+    for(let i=1;i<=n;i++){box=$('#pvb');if(!box)return;
+      const pg=await doc.getPage(i),w=Math.min(box.clientWidth||560,580),v0=pg.getViewport({scale:1}),v=pg.getViewport({scale:w/v0.width*dpr});
+      const cv=document.createElement('canvas');cv.width=v.width;cv.height=v.height;cv.style.width=w+'px';cv.className='pvc';box.appendChild(cv);
+      await pg.render({canvasContext:cv.getContext('2d'),viewport:v}).promise}
+    if(doc.numPages>n&&$('#pvb'))$('#pvb').insertAdjacentHTML('beforeend',`<small>Showing first ${n} of ${doc.numPages} pages. Use “Open in new tab” to see all.</small>`)
+  }catch(e){const b=$('#pvb');if(b)b.innerHTML=`<iframe src="${esc(url)}" style="width:100%;height:65vh;border:0"></iframe>`}
+}
+function prevCart(i){const it=cart[i];if(!it)return;const url=it.url||(it._u=it._u||URL.createObjectURL(it.file));pdfPrev(url,it.name)}
+function prevShop(id){const f=SHOPF.find(x=>x.id===id);if(f)pdfPrev(f.url,f.name)}
+function prevOrd(id,j){const o=MYO.find(x=>x.id===id);if(!o)return;const x=fileOf(o)[j];if(x)pdfPrev(x.url,x.name)}
+const upiLink=o=>`upi://pay?pa=${cfg.upi}&pn=${encodeURIComponent(SHOP_NAME)}&am=${o.amount}&cu=INR&tn=${encodeURIComponent(o.order_no||'')}`;
+function openUpi(id){const o=MYO.find(x=>x.id===id);if(!o)return;
+  if(!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent))return toast('💻 UPI apps cannot open on a computer. Scan the QR with your phone (GPay / PhonePe / Paytm).');
+  const t=setTimeout(()=>{if(!document.hidden)toast('No UPI app opened. Scan the QR or copy the UPI ID instead.')},2000);
+  document.addEventListener('visibilitychange',()=>clearTimeout(t),{once:true});
+  location.href=upiLink(o)}
+async function copyUpi(){try{await navigator.clipboard.writeText(cfg.upi);toast('📋 UPI ID copied: '+cfg.upi)}catch(e){const i=document.createElement('input');i.value=cfg.upi;document.body.appendChild(i);i.select();try{document.execCommand('copy');toast('📋 UPI ID copied: '+cfg.upi)}catch(_){toast('UPI ID: '+cfg.upi)}i.remove()}}
+function payPrev(id){const o=MYO.find(x=>x.id===id);if(!o)return;
+  const link=`upi://pay?pa=${cfg.upi}&pn=${encodeURIComponent(SHOP_NAME)}&am=${o.amount}&cu=INR&tn=${encodeURIComponent(o.order_no||'')}`;
+  modal(`<h3>📱 Pay ${rs(o.amount)} · ${esc(o.order_no||'')}</h3><div id="mqr" class="mqr"></div><p>UPI ID: <b>${esc(cfg.upi)}</b></p><div class="noprint"><button class="btn sm" onclick="openUpi('${o.id}')">📲 Open UPI app</button> <button class="btn sm ghost" onclick="copyUpi()">📋 Copy UPI ID</button></div><p><small>After you pay, the shop confirms it and this order turns <b>✅ Paid</b>. Then your barcode is ready to show at the counter.</small></p>`);
+  const q=$('#mqr');if(window.QRCode)new QRCode(q,{text:link,width:190,height:190,colorDark:'#4c1d95'})}
+function barPrev(id){const o=MYO.find(x=>x.id===id);if(!o)return;const paid=o.pay_status==='paid';
+  modal(`<h3>🆔 ${esc(o.order_no)}</h3><div class="bcw" style="padding:14px"><svg id="bigbc"></svg></div><div class="bcn" style="font-size:16px">🔒 Amount locked: ${rs(o.amount)}</div>
+  ${!paid&&o.pay_method!=='Cash'?`<div class="payb" style="justify-content:center;text-align:left"><div class="pqr" id="bq"></div><div class="pbi"><b>🔒 Scan to pay ${rs(o.amount)}</b><small>The amount is locked in this QR</small><small>UPI ID: ${esc(cfg.upi)}</small></div></div>`:''}
+  ${!paid&&o.pay_method==='Cash'?`<p><b>💵 Pay ${rs(o.amount)} cash at the counter</b></p>`:''}
+  <p>${paid?'<span class="tag paid">✅ Payment received</span>':'<span class="tag unpaid">💳 Payment not confirmed yet</span>'} · ${o.pay_method==='Cash'?'💵 Cash':'📱 UPI'}</p>
+  <p><small>${paid?'Show this barcode at the shop counter to collect your prints.':'Pay first, then show this barcode at the shop counter.'}</small></p>
+  <button class="btn sm noprint" onclick="document.body.classList.add('pm');window.print();document.body.classList.remove('pm')">🖨️ Print / Save</button>`);
+  const bq=$('#bq');if(bq&&window.QRCode)new QRCode(bq,{text:`upi://pay?pa=${cfg.upi}&pn=${encodeURIComponent(SHOP_NAME)}&am=${o.amount}&cu=INR&tn=${encodeURIComponent(o.order_no)}`,width:170,height:170,colorDark:'#4c1d95'});
+  try{const sv=$('#bigbc');JsBarcode(sv,lockCode(o.order_no,o.amount),{format:'CODE128',height:90,displayValue:true,fontSize:13,margin:6,width:2});
+    const w=parseFloat(sv.getAttribute('width')),h=parseFloat(sv.getAttribute('height'));
+    if(w&&h){if(!sv.getAttribute('viewBox'))sv.setAttribute('viewBox',`0 0 ${w} ${h}`);sv.removeAttribute('width');sv.removeAttribute('height');sv.style.cssText='width:100%;max-width:520px;height:auto'}}catch(e){}}
+let MYO=[];
+async function myOrders(){
+  const {data,error}=await db.from('orders').select('*').eq('user_id',user.id).order('created_at',{ascending:false});
+  const el=$('#mine');if(!el)return;
+  if(error)return el.innerHTML='Could not load orders: '+esc(niceErr(error));
+  MYO=data||[];regLocks(MYO);
+  el.innerHTML=!MYO.length?'No orders yet.':MYO.map(o=>{const paid=o.pay_status==='paid',cash=o.pay_method==='Cash',dn=o.status==='done';
+    return `<div class="oc"><div class="oh"><b>🆔 ${esc(o.order_no||'—')}</b><span class="tag ${esc(o.pay_status)}">${paid?'✅ Paid':'💳 Unpaid'}</span><span class="tag ${dn?'done':'pending'}">${dn?'✔ Ready':'⏳ Printing'}</span></div>
+    <small>${new Date(o.created_at).toLocaleString()} · ${cash?'💵 Cash':'📱 UPI'}</small>
+    ${fileOf(o).map((x,j)=>`<div class="fl"><div>📄 <b>${esc(x.name)}</b>${fileDone(o,x)?' <span class="tag done">✔ Ready</span>':''}<br><small>${[x.pages+' pg'+(x.pr?' ('+esc(x.pr)+')':''),MODE_LBL[x.mode],copyLbl(x),x.amt!=null?rs(x.amt):''].filter(Boolean).join(' · ')}</small>${x.dt?`<br><small>📝 ${esc(x.dt)}</small>`:''}</div><button class="btn sm ghost" onclick="prevOrd('${o.id}',${j})">👁️ Preview</button></div>`).join('')}
+    <div class="oa"><b>${rs(o.amount)} · ${cash?'💵 Cash':'📱 UPI'}</b>${paid?'<span class="tag paid">✅ Payment received</span>':(cash?'<span class="tag unpaid">Pay cash at the counter</span>':`<button class="btn sm" onclick="payPrev('${o.id}')">📱 Pay / Show QR</button>`)}</div>
+    ${!paid&&!cash?`<div class="payb"><div class="pqr" data-am="${o.amount}" data-no="${esc(o.order_no||'')}"></div><div class="pbi"><b>📱 Scan &amp; pay ${rs(o.amount)}</b><small>UPI ID: ${esc(cfg.upi)}</small><div class="oa" style="margin:0"><button class="btn sm" onclick="openUpi('${o.id}')">📲 Open UPI app</button><button class="btn sm ghost" onclick="copyUpi()">📋 Copy UPI ID</button></div><small>On a computer? Scan the QR with your phone.</small><small>After the shop confirms your payment, this turns ✅ Paid.</small></div></div>`:''}
+    ${o.order_no?`<div class="bcw" style="max-width:300px"><svg class="bc" data-code="${esc(lockCode(o.order_no,o.amount))}"></svg><div class="bcn">🔒 ${rs(o.amount)}</div></div><div class="oa"><button class="btn sm ghost" onclick="barPrev('${o.id}')">🔍 Preview barcode</button><small>${paid?'✅ Paid – show this at the shop':'Pay first, then show this at the shop'}</small></div>`:''}</div>`}).join('');
+  document.querySelectorAll('.pqr').forEach(el=>{el.innerHTML='';
+    if(window.QRCode)new QRCode(el,{text:`upi://pay?pa=${cfg.upi}&pn=${encodeURIComponent(SHOP_NAME)}&am=${el.dataset.am}&cu=INR&tn=${encodeURIComponent(el.dataset.no||'')}`,width:150,height:150,colorDark:'#4c1d95'});
+    else if(cfg.qr)el.innerHTML=`<img src="${esc(cfg.qr)}">`});
+  setTimeout(barcodes,0)}
+
+/* ---------- ADMIN ---------- */
+const autoOn=()=>false;
+function setAuto(on){try{localStorage.setItem('ph_auto',on?'1':'0')}catch(e){}toast(on?'⚡ Auto-complete ON':'Auto-complete OFF');if(on)completePaid(true)}
+let atab='orders',selS=new Set(),pgN=1,per=10,openId=null,curList=[];
+const ini=s=>(String(s||'?').trim().charAt(0)||'?').toUpperCase();
+const DAY=864e5,dayKey=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x.getTime()};
+function setTab(t){atab=t;selS.clear();openId=null;pgN=1;curF=null;adminView()}
+const fltBtns=()=>[['all','All'],['pending','⏳ Not completed'],['done','✔ Done']].map(([k,l])=>`<button class="${flt===k?'on':''}" onclick="setFlt('${k}')">${l}</button>`).join('');
+function setFlt(k){flt=k;pgN=1;$('#flt').innerHTML=fltBtns();renderOrders()}
+async function adminView(){
+  if(chan){try{db.removeChannel(chan)}catch(e){}chan=null}
+  const mi=(k,ic,l)=>`<button class="mi ${atab===k?'on':''}" onclick="setTab('${k}')">${ic} ${l}</button>`;
+  let body='';
+  if(atab==='orders')body=`<div class="ah"><h2>Orders</h2><div class="tools"><input id="q" placeholder="🔍 Search / scan Order ID, name, phone" oninput="pgN=1;renderOrders()"><div class="seg" id="flt">${fltBtns()}</div><button class="btn sm ghost" onclick="exportCsv(curList)">⬆️ Export</button><button class="btn sm ghost" onclick="printSlips(curList.slice(0,50))">🖨️ Barcodes &amp; QR</button><button class="btn sm del" onclick="delDone()">🗑️ Delete completed</button></div></div><div class="sc4" id="st"></div><div id="tb">Loading…</div>`;
+  else if(atab==='files')body=`<div class="ah"><h2>Shop files</h2></div><div class="card"><h2>📤 Add to the student library</h2><p class="mut" style="margin-top:-6px">Make folders (e.g. Engineering → Lab) and put files inside. Students open the folders and print.</p><p class="wh" id="sfWhere"></p>
+  <label>📁 New folder inside the current location</label><div class="fadd"><input id="nfName" placeholder="e.g. Engineering, Lab, Sem 3…" onkeydown="if(event.key==='Enter')addFolder()"><button class="btn" onclick="addFolder()">➕ Create folder</button></div>
+  <label>PDF file(s)</label><input id="sfFile" type="file" accept="application/pdf" multiple><label>Short note (optional, students see it)</label><input id="sfNote" placeholder="e.g. Class 10 Maths – Chapter 3 notes"><button class="btn" id="sfBtn" onclick="addShopFiles()">⬆️ Upload here</button></div><div class="card"><h2>📚 Folders &amp; files</h2><div id="sfList">Loading…</div></div>`;
+  else if(atab==='overview')body=`<div class="ah"><h2>Overview</h2></div><div class="sc4" id="st"></div><div class="card"><h2>📊 Today's overview</h2><div class="row" id="pies"></div></div>`;
+  else body=`<div class="ah"><h2>Settings</h2></div><div class="card"><h2>💳 Payment settings</h2><div class="row"><div><label>👤 Shopkeeper name</label><input id="sOwn" value="${esc(cfg.owner)}"></div><div><label>📞 Shopkeeper phone</label><input id="sPh" type="tel" value="${esc(cfg.phone)}"></div><div><label>📱 Your UPI ID</label><input id="sUpi" value="${esc(cfg.upi)}"></div><div><label>Scanner (QR) image</label><input id="sQr" type="file" accept="image/*" onchange="prevQr(this)"></div>
+  <div style="text-align:center"><img id="qrPrev" src="${esc(cfg.qr||'')}" style="max-height:110px;border-radius:10px;${cfg.qr?'':'display:none'}"></div></div><button class="btn" onclick="saveCfg()">💾 Save UPI &amp; scanner</button></div>
+  <div class="card"><h2>⚡ Auto-complete</h2><div class="sw"><label><input type="checkbox" ${autoOn()?'checked':''} onchange="setAuto(this.checked)"><span class="tg"></span>Mark done when payment received</label><button class="btn sm ghost" onclick="completePaid()">✅ Complete all paid</button></div></div><div class="card"><h2>🖨️ Print payment QR</h2><p class="mut" style="margin-top:-6px">Print your shop UPI QR to stick at the counter.</p><button class="btn" onclick="printShopQr()">🖨️ Print shop QR</button></div><div class="card"><h2>💰 Rates</h2>${rates()}</div>`;
+  app.innerHTML=`<div class="adm"><aside class="sd"><div class="lg0">${LOGO(30)}<span>PrintHub</span></div><div class="shopbox"><div class="ca">${esc(ini(cfg.owner))}</div>${esc(SHOP_NAME)}</div><small class="mt mut">Menu</small>${mi('orders','🧾','Orders')}${mi('files','📚','Shop files')}${mi('overview','📊','Overview')}${mi('settings','⚙️','Settings')}<div class="me"><div class="ca">${esc(ini(user.email))}</div><div><b>Admin</b><small>${esc(user.email)}</small></div></div><button class="mi" onclick="logout()">🚪 Log out</button></aside><section class="ac">${body}</section></div>`;
+  if(atab==='files')loadShopAdmin();
+  if(atab==='orders'||atab==='overview'){loadAdmin();chan=db.channel('o').on('postgres_changes',{event:'*',schema:'public',table:'orders'},loadAdmin).subscribe()}
+}
+async function addFolder(){const n=($('#nfName').value||'').trim();if(!n)return toast('Type a folder name');
+  const {error}=await db.from('shop_folders').insert({name:n,parent_id:curF});if(error)return toast(fixErr(error));
+  $('#nfName').value='';toast('📁 Folder created');await loadShopAdmin()}
+async function delFolder(id){const f=FOLD.find(x=>x.id===id);if(!f)return;const d=deep(id),n=SHOPF.filter(x=>d.includes(x.folder_id)).length;
+  if(!confirm(`Delete folder "${f.name}"?\nThis also deletes ${d.length-1} sub-folder(s) and ${n} file(s) inside it from the student list.\n(Orders already placed keep working.)`))return;
+  const {data,error}=await db.from('shop_folders').delete().eq('id',id).select('id');
+  if(error)return toast(fixErr(error));if(!data||!data.length)return toast('⛔ Delete not allowed – run supabase_folders.sql.');
+  if(d.includes(curF))curF=null;toast('🗑️ Folder deleted');loadShopAdmin()}
+async function moveFile(id,v){if(!v)return;
+  const {data,error}=await db.from('shop_files').update({folder_id:v==='root'?null:v}).eq('id',id).select('id');
+  if(error)return toast(fixErr(error));if(!data||!data.length)return toast('⛔ Move not allowed – run supabase_folders.sql.');
+  toast('📁 Moved');loadShopAdmin()}
+async function addShopFiles(){const fs=Array.from($('#sfFile').files);if(!fs.length)return toast('Choose PDF file(s) first');
+  const b=$('#sfBtn');b.disabled=true;upl('Uploading…');
+  try{for(const f of fs){let pages=null;try{pages=(await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise).numPages}catch(e){}
+      const path=`shop/f_${Date.now()}_${f.name.replace(/[^\w.]/g,'_')}`;
+      const u=await db.storage.from('pdfs').upload(path,f);if(u.error)throw u.error;
+      const url=db.storage.from('pdfs').getPublicUrl(path).data.publicUrl;
+      const row={name:f.name,descr:($('#sfNote').value||'').trim()||null,url,path,pages};if(curF)row.folder_id=curF;
+      const {error}=await db.from('shop_files').insert(row);if(error)throw error}
+    uplOff();toast('✅ Added – students can see it now');$('#sfFile').value='';$('#sfNote').value='';loadShopAdmin()}
+  catch(e){uplOff();toast(fixErr(e))}finally{b.disabled=false}}
+async function loadShopAdmin(){const el=$('#sfList');if(!el)return;
+  await loadFolders();
+  const {data,error}=await db.from('shop_files').select('*').order('created_at',{ascending:false});
+  if(error){el.innerHTML='Could not load: '+esc(niceErr(error))+'<br><small>Run the shop_files SQL in Supabase first.</small>';return}
+  SHOPF=data||[];shopRender()}
+async function delShop(id){const f=SHOPF.find(x=>x.id===id);if(!f||!confirm(`Remove "${f.name}" from the student list?\n(Orders already placed with it keep working.)`))return;
+  const {data,error}=await db.from('shop_files').delete().eq('id',id).select('id');
+  if(error)return toast(niceErr(error));if(!data||!data.length)return toast('⛔ Remove not allowed – run the shop_files SQL.');
+  toast('🗑️ Removed from student list');loadShopAdmin()}
+function prevQr(i){const f=i.files[0];if(!f)return;const p=$('#qrPrev');p.src=URL.createObjectURL(f);p.style.display='block'}
+async function saveCfg(){try{let qr=cfg.qr;const f=$('#sQr').files[0];
+  if(f){const path=`shop/qr_${Date.now()}_${f.name.replace(/[^\w.]/g,'_')}`;const u=await db.storage.from('pdfs').upload(path,f);if(u.error)throw u.error;qr=db.storage.from('pdfs').getPublicUrl(path).data.publicUrl}
+  const {error}=await db.from('settings').upsert({id:1,upi_id:$('#sUpi').value.trim(),qr_url:qr,shop_owner:$('#sOwn').value.trim(),shop_phone:$('#sPh').value.trim()});if(error)throw error;cfg.upi=$('#sUpi').value.trim();cfg.owner=$('#sOwn').value.trim();cfg.phone=$('#sPh').value.trim();cfg.qr=qr;toast('✅ Saved')}catch(e){toast(niceErr(e))}}
+async function completePaid(silent){const {data,error}=await db.from('orders').update({status:'done'}).eq('pay_status','paid').eq('status','pending').select('id');
+  if(error)return toast(error.message);if(!silent)toast(data&&data.length?`✔ ${data.length} completed`:'No paid pending orders');loadAdmin()}
+const fileOf=o=>Array.isArray(o.items)&&o.items.length?o.items:[{name:o.file_name,url:o.file_url,pages:o.total_pages,copies:o.copies,c:o.color_pages,b:o.bw_pages,d:o.duplex_pages,mode:'',co:o.color_range,du:o.duplex_range}];
+const MODE_LBL={bw:'⚫ B&W',color:'🎨 Colour',duplex:'📄 Both-side',custom:'✏️ Custom'};
+/* ---- per-file / per-option "Complete" (admin) ---- */
+async function setOpts(id,j,keys,val){
+  const o=ADM.find(x=>x.id===id);if(!o||!Array.isArray(o.items)||!o.items.length)return toast('Old order – use the "Complete whole order" button');
+  const items=o.items.map((x,i)=>{const dn={};KEYS(x).forEach(k=>dn[k]=optDone(o,x,k));if(i===j)keys.forEach(k=>dn[k]=val);return{...x,dn}});
+  const st=items.every(x=>fileDone({},x))?'done':'pending';
+  const {error}=await db.from('orders').update({items,status:st}).eq('id',id);
+  if(error)return toast(error.message);
+  toast(st==='done'&&o.status!=='done'?'🎉 All files done – order completed':'Updated ✔');loadAdmin()}
+function togOpt(id,j,k){const o=ADM.find(x=>x.id===id);if(!o||!Array.isArray(o.items))return;setOpts(id,j,[k],!optDone(o,o.items[j],k))}
+function togFile(id,j){const o=ADM.find(x=>x.id===id);if(!o||!Array.isArray(o.items))return;const x=o.items[j];setOpts(id,j,KEYS(x),!fileDone(o,x))}
+
+/* ---- print barcode + QR slips (admin) ---- */
+const doPrint=()=>{document.body.classList.add('pm');window.print();document.body.classList.remove('pm')};
+const slipHtml=o=>{const code=lockCode(o.order_no||'',o.amount),paid=o.pay_status==='paid';
+  return `<div class="slip"><div class="sh">🏪 ${esc(SHOP_NAME)}</div><div class="sid">${esc(o.order_no||'—')}</div><small>${esc(o.name||'-')} · ${esc(o.class||'-')} · ${esc(o.phone||'-')}</small>
+  <div class="sgrid"><div><div class="bcw"><svg class="sbc" data-code="${esc(code)}"></svg></div><small>Barcode</small></div><div><div class="sqr" data-code="${esc(code)}"></div><br><small>QR code</small></div></div>
+  <div class="sam">🔒 ${rs(o.amount)} · ${paid?'✅ PAID':'💳 UNPAID'} · ${o.pay_method==='Cash'?'💵 Cash':'📱 UPI'}</div><small>${new Date(o.created_at).toLocaleString()} · ${fileOf(o).length} file(s) · ${+o.total_pages||0} pg</small></div>`};
+function drawSlips(){
+  document.querySelectorAll('#mdl svg.sbc').forEach(sv=>{try{JsBarcode(sv,sv.dataset.code,{format:'CODE128',height:60,displayValue:true,fontSize:12,margin:4,width:1.6});
+    const w=parseFloat(sv.getAttribute('width')),h=parseFloat(sv.getAttribute('height'));
+    if(w&&h){if(!sv.getAttribute('viewBox'))sv.setAttribute('viewBox',`0 0 ${w} ${h}`);sv.removeAttribute('width');sv.removeAttribute('height')}}catch(e){}});
+  document.querySelectorAll('#mdl .sqr').forEach(el=>{el.innerHTML='';if(window.QRCode)new QRCode(el,{text:el.dataset.code,width:120,height:120})})}
+function printSlips(list){list=(list||[]).filter(Boolean);if(!list.length)return toast('Select order(s) first');
+  modal(`<h3>🖨️ Barcode &amp; QR (${list.length} order${list.length>1?'s':''})</h3><p class="noprint"><small>Both the barcode and the QR hold the order number with the amount locked. Scan either one at the counter.</small></p><div class="slips">${list.map(slipHtml).join('')}</div><div class="noprint" style="margin-top:12px"><button class="btn" onclick="doPrint()">🖨️ Print</button></div>`);drawSlips()}
+function printShopQr(){
+  modal(`<h3>🖨️ Shop payment QR</h3><div class="slips"><div class="slip"><div class="sh">🏪 ${esc(SHOP_NAME)}</div><div class="sid" style="letter-spacing:0">Scan &amp; Pay</div><div id="spq" style="margin:10px 0">${cfg.qr?`<img src="${esc(cfg.qr)}" style="width:220px;max-width:100%">`:''}</div><b>UPI: ${esc(cfg.upi)}</b><br><small>👤 ${esc(cfg.owner)} · 📞 ${esc(cfg.phone)}</small></div></div><div class="noprint" style="margin-top:12px"><button class="btn" onclick="doPrint()">🖨️ Print</button></div>`);
+  if(!cfg.qr&&window.QRCode)new QRCode($('#spq'),{text:`upi://pay?pa=${cfg.upi}&pn=${encodeURIComponent(SHOP_NAME)}&cu=INR`,width:200,height:200})}
+function filesTable(o){
+  const fs=fileOf(o),legacy=!(Array.isArray(o.items)&&o.items.length);
+  const pagesCell=x=>x.mode==='custom'
+    ?`<small>⚫ Single B&amp;W: <b>${esc(x.sb||'-')}</b><br>🎨 Colour: <b>${esc(x.co||'-')}</b><br>📄 Both-side: <b>${esc(x.du||'-')}</b></small>`
+    :`<b>${x.pr?esc(x.pr):'All pages'}</b>`;
+  const rows=fs.map((x,j)=>{const ks=KEYS(x),fd=fileDone(o,x);
+    const chips=ks.length>1&&!legacy?ks.map(k=>{const on=optDone(o,x,k);return `<button class="chk ${on?'on':''}" onclick="togOpt('${o.id}',${j},'${k}')">${on?'✔':'○'} ${OPT_L[k]}</button>`}).join(''):'';
+    const fb=legacy?'':`<button class="btn sm ${fd?'ghost':''}" onclick="togFile('${o.id}',${j})">${fd?'↩️ Undo file':'✅ Complete file'}</button>`;
+    return `<tr class="${fd?'fdone':''}">
+    <td class="n" data-l="#">${j+1}</td>
+    <td class="fn" data-l="File">📄 <b>${esc(x.name)}</b>${fd&&!legacy?' <span class="tag done">✔ Done</span>':''}</td>
+    <td data-l="Pages to print">${pagesCell(x)}<br><small>${x.pages} of ${x.tp||x.pages} pg</small></td>
+    <td data-l="Print type">${MODE_LBL[x.mode]||'—'}</td>
+    <td class="n" data-l="🎨 Colour">${x.c||0}</td>
+    <td class="n" data-l="⚫ B&amp;W">${x.b||0}</td>
+    <td class="n" data-l="📄 Both-side">${x.d||0}</td>
+    <td class="n" data-l="Copies">${copyLbl(x)}</td>
+    <td class="dtl ${x.dt?'has':''}" data-l="📝 Details">${x.dt?esc(x.dt):'<small>—</small>'}</td>
+    <td data-l="Amount"><b>${x.amt!=null?rs(x.amt):'—'}</b></td>
+    <td data-l="Print"><a class="btn sm" href="${esc(x.url)}" target="_blank" rel="noopener">⬇️ Open / Print</a></td>
+    <td data-l="Completed?"><div class="dg">${chips}${fb}</div></td></tr>`}).join('');
+  const T=k=>fs.reduce((s,x)=>s+(+x[k]||0)*cp(x,k),0);
+  return `<div class="ft"><table>
+    <thead><tr><th>#</th><th>File</th><th>Pages to print</th><th>Print type</th><th>🎨 Colour</th><th>⚫ B&amp;W</th><th>📄 Both-side</th><th>Copies</th><th>📝 Details</th><th>Amount</th><th>Print</th><th>✅ Completed?</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td></td><td data-l="Files">${fs.length} file${fs.length>1?'s':''}</td><td data-l="Pages">${fs.reduce((s,x)=>s+(+x.pages||0),0)} pg</td><td></td><td class="n" data-l="🎨 Colour">${T('c')}</td><td class="n" data-l="⚫ B&amp;W">${T('b')}</td><td class="n" data-l="📄 Both-side">${T('d')}</td><td></td><td></td><td data-l="Total">${rs(o.amount)}</td><td></td><td></td></tr></tfoot>
+  </table></div>`;
+}
+const spark=(a,col)=>{const mx=Math.max(...a,1),pts=a.map((v,i)=>`${(i*(96/(a.length-1))).toFixed(1)},${(34-v/mx*30).toFixed(1)}`).join(' ');return `<svg viewBox="0 0 96 36" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`};
+async function loadAdmin(){
+  const {data:d,error}=await db.from('orders').select('*').order('created_at',{ascending:false});
+  if(error){const t=$('#tb');if(t)t.innerHTML='Could not load orders: '+esc(niceErr(error))+'<br><small>Run supabase_update.sql (it fixes the admin permission).</small>';return}
+  const data=d||[];
+  if(autoOn()){const ids=data.filter(o=>o.pay_status==='paid'&&o.status!=='done').map(o=>o.id);
+    if(ids.length){const r=await db.from('orders').update({status:'done'}).in('id',ids);if(!r.error)data.forEach(o=>{if(ids.includes(o.id))o.status='done'})}}
+  ADM=data;regLocks(ADM);
+  const sum=a=>a.reduce((s,o)=>s+ +o.amount,0),base=dayKey(new Date()),days=[6,5,4,3,2,1,0].map(i=>base-i*DAY);
+  const ser=(fn,agg)=>days.map(t=>agg(data.filter(o=>dayKey(o.created_at)===t&&fn(o))));
+  const sk=(l,arr,fmt,col)=>{const c=arr[6],p=arr[5],ch=p?Math.round((c-p)/p*100):null;
+    return `<div class="sk"><small>${l}</small><div class="v"><b>${fmt(c)}</b>${spark(arr,col)}</div><small>${ch===null?'7-day trend':`<span class="chg ${ch>=0?'up':'dn'}">${ch>=0?'↑':'↓'} ${Math.abs(ch)}%</span> vs yesterday`}</small></div>`};
+  const st=$('#st');
+  if(st)st.innerHTML=sk("🛒 Today's orders",ser(()=>true,a=>a.length),v=>v,'#2563eb')+sk('💰 Today total',ser(()=>true,sum),rs,'#7c3aed')+sk('✅ Payment received',ser(o=>o.pay_status==='paid',sum),rs,'#16a34a')+sk('⏳ Pending prints',ser(o=>o.status!=='done',a=>a.length),v=>v,'#f59e0b');
+  const pies=$('#pies');
+  if(pies){const td=data.filter(o=>dayKey(o.created_at)===base),dn=td.filter(o=>o.status==='done').length,pd=td.filter(o=>o.pay_status==='paid');
+    const pg=td.reduce((a,o)=>{fileOf(o).forEach(x=>{a[0]+=(+x.c||0)*cp(x,'c');a[1]+=(+x.b||0)*cp(x,'b');a[2]+=(+x.d||0)*cp(x,'d')});return a},[0,0,0]);
+    pies.innerHTML=pie(`✅ Print status (${dn}/${td.length})`,[{l:'Done',v:dn,c:'#16a34a'},{l:'Not completed',v:td.length-dn,c:'#f59e0b'}],v=>v)
+     +pie('💰 Payment',[{l:'Received',v:sum(pd),c:'#2563eb'},{l:'Pending',v:sum(td)-sum(pd),c:'#ef4444'}],rs)
+     +pie('🖨️ Pages printed',[{l:'Colour',v:pg[0],c:'#7c3aed'},{l:'B&W',v:pg[1],c:'#2563eb'},{l:'Both-side',v:pg[2],c:'#a78bfa'}],v=>v)}
+  renderOrders();
+}
+let visIds=[];
+function renderOrders(){
+  const tb=$('#tb');if(!tb)return;
+  const raw=($('#q')?.value||'').trim(),sc=parseLock(raw),q=(sc?sc.no:raw).toLowerCase();
+  const list=ADM.filter(o=>!o.archived&&(flt==='all'||(flt==='done'?o.status==='done':o.status!=='done'))&&(!q||((o.order_no||'')+' '+(o.name||'')+' '+(o.phone||'')).toLowerCase().includes(q)));
+  curList=list;const ids=new Set(ADM.map(o=>o.id));[...selS].forEach(i=>{if(!ids.has(i))selS.delete(i)});
+  const pages=Math.max(1,Math.ceil(list.length/per));if(pgN>pages)pgN=pages;
+  const vis=list.slice((pgN-1)*per,pgN*per);visIds=vis.map(o=>o.id);
+  const pb=(o,m,ic,l,main)=>`<button class="btn sm ${main?'':'ghost'}" onclick="upd('${o.id}',{pay_status:'paid',pay_method:'${m}'})">${ic} ${l}</button>`;
+  const rows=vis.map(o=>{const fs=fileOf(o),cash=o.pay_method==='Cash',dn=o.status==='done',op=openId===o.id,hasI=Array.isArray(o.items)&&o.items.length;
+    let r=`<tr class="r ${selS.has(o.id)?'sel':''}"><td data-l="Select"><input type="checkbox" ${selS.has(o.id)?'checked':''} onchange="selOne('${o.id}',this.checked)"></td>
+    <td data-l="Order"><b>${esc(o.order_no||'—')}</b></td>
+    <td data-l="Date">${new Date(o.created_at).toLocaleDateString()}<br><small>${new Date(o.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</small></td>
+    <td data-l="Customer"><div class="cu"><div class="ca">${esc(ini(o.name))}</div><div><b>${esc(o.name||'-')}</b><small>${esc(o.class||'-')} · ${esc(o.phone||'-')}</small></div></div></td>
+    <td data-l="Items">${fs.length} file${fs.length>1?'s':''}<br><small>${+o.total_pages||0} pg</small></td>
+    <td data-l="Amount"><b>${rs(o.amount)}</b></td>
+    <td data-l="Payment"><span class="tag ${esc(o.pay_status)}">${esc(o.pay_status)}</span><br><small>${cash?'💵 Cash':'📱 UPI'}</small></td>
+    <td data-l="Status"><span class="tag ${dn?'done':'pending'}">${dn?'✔ Done':'⏳ Not completed'}</span>${hasI?`<br><small>${fs.filter(x=>fileDone(o,x)).length}/${fs.length} files done</small>`:''}</td>
+    <td data-l="Action"><button class="btn sm ghost" onclick="togO('${o.id}')">${op?'▲ Hide':'▼ Details'}</button></td></tr>`;
+    if(op)r+=`<tr class="dt"><td colspan="9">${o.order_no?`<div class="bcw" style="max-width:320px"><svg class="bc" data-code="${esc(lockCode(o.order_no,o.amount))}"></svg><div class="bcn">${esc(o.order_no)}</div><small>🔒 Amount locked: ${rs(o.amount)}</small></div>`:''}
+    ${filesTable(o)}${o.note?`<div class="msg">💬 <b>Message:</b> ${esc(o.note)}</div>`:''}
+    <div class="oa"><b>${rs(o.amount)} · ${cash?'💵 Cash':'📱 UPI'}</b><button class="btn sm ghost" onclick="printSlips([ADM.find(x=>x.id==='${o.id}')])">🖨️ Barcode &amp; QR</button>${o.pay_status!=='paid'?(cash?pb(o,'Cash','💵','Cash received',1)+pb(o,'UPI','📱','UPI received'):pb(o,'UPI','📱','UPI received',1)+pb(o,'Cash','💵','Cash received')):''}
+    ${dn?`<button class="btn sm ghost" onclick="upd('${o.id}',{status:'pending'})">↩️ Undo all</button><button class="btn sm del" onclick="delOne('${o.id}')">🗑️ Delete</button>`:`<button class="btn sm" onclick="upd('${o.id}',{status:'done'})">✅ Complete whole order</button>`}</div></td></tr>`;
+    return r}).join('');
+  const s=Math.max(1,Math.min(pgN-2,pages-4)),e=Math.min(pages,s+4);let nums='';for(let i=s;i<=e;i++)nums+=`<button class="${i===pgN?'on':''}" onclick="goP(${i})">${i}</button>`;
+  tb.innerHTML=`${scanBanner(sc)}<div class="ot"><div class="sc"><table><thead><tr><th><input type="checkbox" ${vis.length&&vis.every(o=>selS.has(o.id))?'checked':''} onchange="selAll(this.checked)"></th><th>Order</th><th>Date</th><th>Customer</th><th>Items</th><th>Amount</th><th>Payment</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows||'<tr><td colspan="9" style="text-align:center;padding:30px" class="mut">No orders here.</td></tr>'}</tbody></table></div>
+  <div class="pgn"><div>Showing per page<select onchange="setPer(this.value)">${[10,25,50].map(n=>`<option ${n===per?'selected':''}>${n}</option>`).join('')}</select> <span class="mut">· ${list.length} order${list.length===1?'':'s'}</span></div>
+  <div class="pb"><button ${pgN<=1?'disabled':''} onclick="goP(${pgN-1})">Prev</button>${nums}<button ${pgN>=pages?'disabled':''} onclick="goP(${pgN+1})">Next</button></div></div></div>
+  ${selS.size?`<div class="selbar"><span><b>${selS.size}</b> Selected</span><button onclick="exportCsv(ADM.filter(o=>selS.has(o.id)))">⬆️ Export</button><button onclick="printSlips(ADM.filter(o=>selS.has(o.id)))">🖨️ Barcode &amp; QR</button><button onclick="bulkDone()">✅ Mark done</button><button class="rd" onclick="bulkDel()">🗑️ Delete</button><button onclick="selS.clear();renderOrders()">✕</button></div>`:''}`;
+  barcodes();
+}
+function selOne(id,on){on?selS.add(id):selS.delete(id);renderOrders()}
+function selAll(on){visIds.forEach(i=>on?selS.add(i):selS.delete(i));renderOrders()}
+function togO(id){openId=openId===id?null:id;renderOrders()}
+function goP(n){pgN=n;renderOrders()}
+function setPer(v){per=+v;pgN=1;renderOrders()}
+async function bulkDone(){const ids=[...selS];if(!ids.length)return;const {error}=await db.from('orders').update({status:'done'}).in('id',ids);if(error)return toast(error.message);toast(`✔ ${ids.length} marked done`);selS.clear();loadAdmin()}
+function bulkDel(){const l=ADM.filter(o=>selS.has(o.id)&&o.status==='done');if(!l.length)return toast('Only completed orders can be deleted');
+  if(confirm(`Delete ${l.length} completed order(s) permanently?\nThe orders and their PDF files will be removed. This cannot be undone.`))delOrders(l)}
+function exportCsv(list){if(!list.length)return toast('Nothing to export');
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',h=['Order ID','Date','Name','Phone','Class','Files','File details','Pages','Amount','Payment','Method','Status','Note'];
+  const r=list.map(o=>[o.order_no,new Date(o.created_at).toLocaleString(),o.name,o.phone,o.class,fileOf(o).map(x=>x.name).join(' | '),fileOf(o).map(x=>x.dt||'-').join(' | '),o.total_pages,o.amount,o.pay_status,o.pay_method,o.status,o.note].map(q).join(','));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+[h.map(q).join(','),...r].join('\n')],{type:'text/csv'}));a.download='printhub_orders.csv';a.click()}
+const pathOf=u=>{const m=String(u||'').split('/object/public/pdfs/')[1];return m?decodeURIComponent(m):null};
+async function delOrders(os){
+  const paths=os.flatMap(o=>fileOf(o).map(x=>pathOf(x.url))).filter(p=>p&&!p.startsWith('shop/'));
+  const {data,error}=await db.from('orders').delete().in('id',os.map(o=>o.id)).select('id');
+  if(error)return toast(niceErr(error));
+  if(!data||!data.length)return toast('⛔ Delete not allowed. Run the SQL in supabase_update.sql (admin delete permission).');
+  if(paths.length){try{await db.storage.from('pdfs').remove(paths)}catch(e){}}
+  selS.clear();openId=null;toast(`🗑️ ${data.length} order(s) deleted`);loadAdmin();
+}
+function delOne(id){const o=ADM.find(x=>x.id===id);if(o&&o.status==='done'&&confirm(`Delete order ${o.order_no||''} permanently?\nThe order and its PDF files will be removed. This cannot be undone.`))delOrders([o])}
+function delDone(){const l=ADM.filter(o=>o.status==='done');if(!l.length)return toast('No completed orders to delete');
+  if(confirm(`Delete all ${l.length} completed order(s) permanently?\nThe orders and their PDF files will be removed. This cannot be undone.`))delOrders(l)}
+async function upd(id,v){const o=ADM.find(x=>x.id===id);if(v.pay_status==='paid'&&autoOn())v={...v,status:'done'};
+  if(v.status&&o&&Array.isArray(o.items)&&o.items.length){const val=v.status==='done';v={...v,items:o.items.map(x=>{const dn={};KEYS(x).forEach(k=>dn[k]=val);return{...x,dn}})}}
+  const {error}=await db.from('orders').update(v).eq('id',id);if(error)toast(error.message);else{toast('Updated ✔');loadAdmin()}}
+init();
+</script><script>
+/* ===== PH-PAYLOCK: order + payment barcodes, "I have paid", live paid status ===== */
+const slip2=o=>{const no=o.order_no||'',code=lockCode(no,o.amount),st=o.pay_status,paid=st==='paid',
+  link=`upi://pay?pa=${cfg.upi}&pn=${encodeURIComponent(SHOP_NAME)}&am=${o.amount}&cu=INR&tn=${encodeURIComponent(no)}`;
+  return `<div class="slip"><div class="sh">🏪 ${esc(SHOP_NAME)}</div><div class="sid">${esc(no||'—')}</div><small>${esc(o.name||'-')} · ${esc(o.class||'-')} · ${esc(o.phone||'-')}</small>
+  <div class="lbl">🆔 ORDER BARCODE &amp; QR</div>
+  <div class="sgrid"><div><div class="bcw"><svg class="sbc" data-code="${esc(no)}"></svg></div><small>Order barcode</small></div><div><div class="sqr" data-code="${esc(no)}"></div><br><small>Order QR</small></div></div>
+  <div class="lbl">🔒 PAYMENT BARCODE &amp; QR · amount locked ${rs(o.amount)}</div>
+  <div class="sgrid"><div><div class="bcw"><svg class="sbc" data-code="${esc(code)}"></svg></div><small>Payment lock barcode</small></div><div><div class="sqr" data-code="${esc(link)}"></div><br><small>Scan &amp; pay ${rs(o.amount)}</small></div></div>
+  <div class="sam">🔒 ${rs(o.amount)} · ${paid?'✅ PAID':st==='claimed'?'🕓 PAYMENT SUBMITTED':'💳 UNPAID'} · ${o.pay_method==='Cash'?'💵 Cash':'📱 UPI'}</div>
+  ${paid?`<small>Paid ${rs(o.paid_amount!=null?o.paid_amount:o.amount)}${o.paid_at?' · '+new Date(o.paid_at).toLocaleString():''}</small><br>`:''}
+  <small>${new Date(o.created_at).toLocaleString()} · ${fileOf(o).length} file(s) · ${+o.total_pages||0} pg</small></div>`};
+function drawSlips(){
+  document.querySelectorAll('#mdl svg.sbc').forEach(sv=>{try{JsBarcode(sv,sv.dataset.code,{format:'CODE128',height:56,displayValue:true,fontSize:11,margin:4,width:1.5});
+    const w=parseFloat(sv.getAttribute('width')),h=parseFloat(sv.getAttribute('height'));
+    if(w&&h){if(!sv.getAttribute('viewBox'))sv.setAttribute('viewBox',`0 0 ${w} ${h}`);sv.removeAttribute('width');sv.removeAttribute('height')}}catch(e){}});
+  document.querySelectorAll('#mdl .sqr').forEach(el=>{el.innerHTML='';if(window.QRCode)new QRCode(el,{text:el.dataset.code,width:140,height:140})})}
+function printSlips(list){list=(list||[]).filter(Boolean);if(!list.length)return toast('Select order(s) first');
+  modal(`<h3>🖨️ Barcodes &amp; QR (${list.length} order${list.length>1?'s':''})</h3><p class="noprint"><small>Each slip has an <b>order barcode</b> and a <b>payment barcode</b> (amount locked). Scan either one at the counter.</small></p><div class="slips">${list.map(slip2).join('')}</div><div class="noprint" style="margin-top:12px"><button class="btn" onclick="doPrint()">🖨️ Print</button></div>`);drawSlips()}
+function scanBanner(sc){if(!sc)return'';
+  const o=ADM.find(x=>x.order_no===sc.no);
+  if(!o)return`<div class="scn bad">⛔ Barcode read, but no order ${esc(sc.no)} found.</div>`;
+  const real=Math.round(+o.amount*100);
+  if(sc.chk!==lockHash(sc.no,sc.paise))return`<div class="scn bad">⛔ FAKE / EDITED barcode – checksum is wrong. Do not accept.</div>`;
+  if(sc.paise!==real)return`<div class="scn bad">⛔ AMOUNT MISMATCH – barcode says ${rs(sc.paise/100)} but the order says ${rs(o.amount)}.</div>`;
+  const paid=o.pay_status==='paid';
+  return`<div class="scn ok">✅ Verified · ${esc(sc.no)} · amount locked at <b>${rs(o.amount)}</b> · ${paid?'✅ ALREADY PAID '+rs(o.paid_amount!=null?o.paid_amount:o.amount):(o.pay_status==='claimed'?'🕓 student says paid – ':'💳 unpaid – ')+`<button class="btn sm" onclick="upd('${o.id}',{pay_status:'paid',pay_method:'${o.pay_method||'UPI'}'})">✅ Confirm ${rs(o.amount)} received</button>`}</div>`}
+async function upd(id,v){const o=ADM.find(x=>x.id===id);
+  if(v.pay_status==='paid'&&o)v={...v,paid_amount:o.amount,paid_at:new Date().toISOString()};
+  if(v.pay_status==='paid'&&autoOn())v={...v,status:'done'};
+  if(v.status&&o&&Array.isArray(o.items)&&o.items.length){const val=v.status==='done';v={...v,items:o.items.map(x=>{const dn={};KEYS(x).forEach(k=>dn[k]=val);return{...x,dn}})}}
+  const {error}=await db.from('orders').update(v).eq('id',id);if(error)toast(/paid_amount|paid_at|schema cache/i.test(error.message)?'Run supabase_payment.sql in Supabase SQL Editor first.':error.message);else{toast('Updated ✔');loadAdmin()}}
+const payInfo=o=>{const st=o.pay_status;
+  if(st==='paid')return `<div class="paidbox">✅ <b>Payment received ${rs(o.paid_amount!=null?o.paid_amount:o.amount)}</b>${o.paid_at?'<br><small>'+new Date(o.paid_at).toLocaleString()+'</small>':''}</div>`;
+  if(st==='claimed')return `<div class="clbox">🕓 <b>Payment submitted ${rs(o.amount)}</b><br><small>${o.claimed_at?new Date(o.claimed_at).toLocaleString()+' · ':''}Waiting for the shop to confirm</small></div>`;
+  return o.pay_method==='Cash'?`<div class="clbox">💵 <b>Pay ${rs(o.amount)} cash at the counter</b></div>`:`<div class="unbox">💳 <b>Not paid yet</b> · ${rs(o.amount)}</div>`};
+async function claimPay(id){const o=MYO.find(x=>x.id===id);if(!o)return;
+  if(!confirm(`Confirm that you paid ${rs(o.amount)} to ${cfg.upi}?`))return;
+  const {error}=await db.rpc('claim_payment',{p_id:id});
+  if(error)return toast(/claim_payment|function/i.test(error.message)?'Run supabase_payment.sql in Supabase SQL Editor first.':niceErr(error));
+  closeM();toast('✅ Sent to the shop – they will confirm your payment');myOrders()}
+function bigBc(id,code,h){try{const sv=document.getElementById(id);JsBarcode(sv,code,{format:'CODE128',height:h,displayValue:true,fontSize:12,margin:6,width:2});
+  const w=parseFloat(sv.getAttribute('width')),hh=parseFloat(sv.getAttribute('height'));
+  if(w&&hh){if(!sv.getAttribute('viewBox'))sv.setAttribute('viewBox',`0 0 ${w} ${hh}`);sv.removeAttribute('width');sv.removeAttribute('height');sv.style.cssText='width:100%;max-width:520px;height:auto'}}catch(e){}}
+function barPrev(id){const o=MYO.find(x=>x.id===id);if(!o)return;const st=o.pay_status,canPay=st==='unpaid'&&o.pay_method!=='Cash';
+  modal(`<h3>🆔 ${esc(o.order_no)}</h3>
+  <div class="lbl">🆔 ORDER BARCODE</div><div class="bcw" style="padding:12px"><svg id="bigbc"></svg></div>
+  <div class="lbl">🔒 PAYMENT BARCODE · amount locked ${rs(o.amount)}</div><div class="bcw" style="padding:12px"><svg id="bigpay"></svg></div>
+  ${payInfo(o)}
+  ${canPay?`<div class="payb" style="justify-content:center;text-align:left"><div class="pqr" id="bq"></div><div class="pbi"><b>🔒 Scan to pay ${rs(o.amount)}</b><small>UPI ID: ${esc(cfg.upi)}</small><button class="btn sm" onclick="claimPay('${o.id}')">✅ I have paid ${rs(o.amount)}</button></div></div>`:''}
+  <p><small>${st==='paid'?'Show the barcode at the counter to collect your prints.':'Pay, then tap “I have paid”. The shop confirms it and your status updates here instantly.'}</small></p>
+  <button class="btn sm noprint" onclick="document.body.classList.add('pm');window.print();document.body.classList.remove('pm')">🖨️ Print / Save</button>`);
+  bigBc('bigbc',o.order_no,70);bigBc('bigpay',lockCode(o.order_no,o.amount),70);
+  const bq=$('#bq');if(bq&&window.QRCode)new QRCode(bq,{text:`upi://pay?pa=${cfg.upi}&pn=${encodeURIComponent(SHOP_NAME)}&am=${o.amount}&cu=INR&tn=${encodeURIComponent(o.order_no)}`,width:170,height:170,colorDark:'#4c1d95'})}
+async function myOrders(){
+  const {data,error}=await db.from('orders').select('*').eq('user_id',user.id).order('created_at',{ascending:false});
+  const el=$('#mine');if(!el)return;
+  if(error)return el.innerHTML='Could not load orders: '+esc(niceErr(error));
+  MYO=data||[];regLocks(MYO);
+  el.innerHTML=!MYO.length?'No orders yet.':MYO.map(o=>{const st=o.pay_status,paid=st==='paid',cl=st==='claimed',cash=o.pay_method==='Cash',dn=o.status==='done',up=!paid&&!cl&&!cash;
+    return `<div class="oc"><div class="oh"><b>🆔 ${esc(o.order_no||'—')}</b><span class="tag ${paid?'paid':cl?'claimed':'unpaid'}">${paid?'✅ Paid':cl?'🕓 Submitted':'💳 Unpaid'}</span><span class="tag ${dn?'done':'pending'}">${dn?'✔ Ready':'⏳ Printing'}</span></div>
+    <small>${new Date(o.created_at).toLocaleString()} · ${cash?'💵 Cash':'📱 UPI'}</small>
+    ${fileOf(o).map((x,j)=>`<div class="fl"><div>📄 <b>${esc(x.name)}</b>${fileDone(o,x)?' <span class="tag done">✔ Ready</span>':''}<br><small>${[x.pages+' pg'+(x.pr?' ('+esc(x.pr)+')':''),MODE_LBL[x.mode],copyLbl(x),x.amt!=null?rs(x.amt):''].filter(Boolean).join(' · ')}</small>${x.dt?`<br><small>📝 ${esc(x.dt)}</small>`:''}</div><button class="btn sm ghost" onclick="prevOrd('${o.id}',${j})">👁️ Preview</button></div>`).join('')}
+    <div class="oa"><b>${rs(o.amount)} · ${cash?'💵 Cash':'📱 UPI'}</b></div>${payInfo(o)}
+    ${up?`<div class="payb"><div class="pqr" data-am="${o.amount}" data-no="${esc(o.order_no||'')}"></div><div class="pbi"><b>📱 Scan &amp; pay ${rs(o.amount)}</b><small>UPI ID: ${esc(cfg.upi)}</small><div class="oa" style="margin:0"><button class="btn sm" onclick="openUpi('${o.id}')">📲 Open UPI app</button><button class="btn sm ghost" onclick="copyUpi()">📋 Copy UPI ID</button></div><button class="btn sm" onclick="claimPay('${o.id}')">✅ I have paid ${rs(o.amount)}</button><small>On a computer? Scan the QR with your phone. After you pay, tap “I have paid”.</small></div></div>`:''}
+    ${o.order_no?`<div class="lbl">🆔 ORDER BARCODE</div><div class="bcw" style="max-width:340px"><svg class="bc" data-code="${esc(o.order_no)}"></svg></div><div class="lbl">🔒 PAYMENT BARCODE · ${rs(o.amount)} locked</div><div class="bcw" style="max-width:340px"><svg class="bc" data-code="${esc(lockCode(o.order_no,o.amount))}"></svg></div><div class="oa"><button class="btn sm ghost" onclick="barPrev('${o.id}')">🔍 Preview barcodes</button></div>`:''}</div>`}).join('');
+  document.querySelectorAll('.pqr').forEach(el=>{el.innerHTML='';
+    if(window.QRCode)new QRCode(el,{text:`upi://pay?pa=${cfg.upi}&pn=${encodeURIComponent(SHOP_NAME)}&am=${el.dataset.am}&cu=INR&tn=${encodeURIComponent(el.dataset.no||'')}`,width:150,height:150,colorDark:'#4c1d95'});
+    else if(cfg.qr)el.innerHTML=`<img src="${esc(cfg.qr)}">`});
+  setTimeout(barcodes,0)}
+let _cw=null;
+function claimWatch(){if(_cw||!user||!db)return;
+  _cw=db.channel('claims').on('postgres_changes',{event:'UPDATE',schema:'public',table:'orders'},p=>{const n=p.new||{};if(!user)return;
+    if(isAdmin(user)&&n.pay_status==='claimed')toast(`🔔 ${n.order_no||'Order'} – student says paid ${rs(n.amount)}. Please confirm.`);
+    else if(!isAdmin(user)&&n.user_id===user.id&&n.pay_status==='paid'&&n.paid_at&&Date.now()-new Date(n.paid_at)<15000)toast(`✅ Shop received your payment ${rs(n.paid_amount!=null?n.paid_amount:n.amount)}`)}).subscribe()}
+const _route0=route;route=function(){_route0();claimWatch()};
+
+</script>
+<script>
+/* ===== PH-BCTEXT: show readable text under every barcode ===== */
+function barcodes(){if(!window.JsBarcode)return;
+  document.querySelectorAll('svg.bc').forEach(el=>{try{
+    JsBarcode(el,el.dataset.code,{format:'CODE128',height:44,displayValue:false,margin:0,width:1.3});
+    const c=el.dataset.code||'',sc=parseLock(c);
+    let cap=el.nextElementSibling;if(!cap||!cap.classList.contains('bcc')){cap=document.createElement('div');cap.className='bcc';el.insertAdjacentElement('afterend',cap)}
+    cap.innerHTML=sc?`<b>${esc(c)}</b><br><small>Order ${esc(sc.no)} · amount locked ${rs(sc.paise/100)} · check ${esc(sc.chk)}</small>`:`<b>${esc(c)}</b><br><small>Order ID only</small>`;
+  }catch(e){}})}
+
+</script>
+<script>
+/* ===== PH-AUTOPAY: pay at order time -> instantly PAID for student and admin ===== */
+function payUI(){
+  const r=document.querySelector('[name=pm]:checked');if(!r)return;const upi=r.value==='UPI';$('#upi').classList.toggle('hide',!upi);
+  const go=$('#go');if(go)go.textContent=upi?`✅ I have paid ${rs(tot)} – Place order`:'✅ Place order (pay cash at shop)';
+  if(!upi||!cart.length)return;$('#qr').innerHTML='';
+  if(cfg.qr)$('#qr').innerHTML=`<img src="${esc(cfg.qr)}" style="width:200px;max-width:100%;border-radius:8px"><div class="mut" style="font-size:13px">Pay ${rs(tot)}</div>`;
+  else if(window.QRCode)new QRCode($('#qr'),{text:`upi://pay?pa=${cfg.upi}&pn=${encodeURIComponent(SHOP_NAME)}&am=${tot}&cu=INR`,width:170,height:170,colorDark:'#4c1d95'});
+}
+async function placeOrder(){
+  if(!cart.length)return toast('Add a PDF first');
+  const bad=cart.find(x=>!x.np);if(bad)return toast('Enter page numbers for '+bad.name);
+  const pm=document.querySelector('[name=pm]:checked').value;
+  if(pm==='UPI'&&!confirm(`Have you paid ${rs(tot)} to ${cfg.upi}?\nTap OK only AFTER you have paid. Your order will be marked PAID.`))return;
+  const b=$('#go');b.disabled=true;upl('Uploading your PDF(s)…');
+  try{
+    const items=[];
+    for(const it of cart){const path=`${user.id}/${Date.now()}_${it.name.replace(/[^\w.]/g,'_')}`;
+      let url=it.url;if(!url){const up=await db.storage.from('pdfs').upload(path,it.file);if(up.error)throw up.error;url=db.storage.from('pdfs').getPublicUrl(path).data.publicUrl}
+      items.push({name:it.name,url,pages:it.np,tp:it.pages,pr:it.mode!=='custom'&&it.sel==='range'?it.pr:'',mode:it.mode,co:it.co,du:it.du,sb:it.sb,copies:it.mode==='custom'?1:it.copies,kc:it.kc,kb:it.kb,kd:it.kd,c:it.c,b:it.b,d:it.d,amt:it.amt,dt:(it.dt||'').trim()})}
+    const m=user.user_metadata||{};
+    const no='PH-'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
+    const sum=k=>items.reduce((s,x)=>s+x[k],0);
+    const row={user_id:user.id,name:m.name,phone:m.phone,class:m.class,email:user.email,order_no:no,note:($('#note').value||'').trim()||null,items,
+      file_name:items[0].name+(items.length>1?` +${items.length-1} more`:''),file_url:items[0].url,total_pages:sum('pages'),color_pages:sum('c'),bw_pages:sum('b'),duplex_pages:sum('d'),copies:1,amount:tot,pay_method:pm};
+    if(pm==='UPI'){row.pay_status='paid';row.paid_amount=tot;row.paid_at=new Date().toISOString();row.pay_src='student'}
+    const {data:ins,error}=await db.from('orders').insert(row).select('pay_lock,amount').single();if(!error&&ins){row.amount=ins.amount;row.pay_lock=ins.pay_lock;regLocks([row])}
+    if(error){if(/paid_amount|paid_at|pay_src|schema cache/i.test(error.message))throw new Error('Run supabase_autopay.sql in Supabase SQL Editor first.');throw error}
+    cart=[];uplOff();thanks(row);
+    if(row.pay_status==='paid')document.querySelectorAll('#rcpt p').forEach(p=>{if(/will confirm your UPI/.test(p.textContent))p.innerHTML='✅ <b>Payment received '+rs(row.amount)+'</b> – paid by UPI. The shop is notified.'});
+  }catch(e){uplOff();b.disabled=false;toast(niceErr(e))}
+}
+async function verifyPay(id){const {error}=await db.from('orders').update({pay_src:'admin'}).eq('id',id);if(error)return toast(error.message);toast('✔ Payment verified');loadAdmin()}
+async function rejectPay(id){if(!confirm('Payment NOT received in your bank?\nThis order will go back to UNPAID.'))return;
+  const {error}=await db.from('orders').update({pay_status:'unpaid',paid_amount:null,paid_at:null,pay_src:null}).eq('id',id);if(error)return toast(error.message);toast('↩️ Order set back to unpaid');loadAdmin()}
+function decoPay(){document.querySelectorAll('#tb tr.r').forEach(tr=>{
+  const no=((tr.querySelector('td[data-l="Order"] b')||{}).textContent||'').trim(),o=ADM.find(x=>x.order_no===no);
+  if(!o||o.pay_status!=='paid'||o.pay_src!=='student')return;
+  const td=tr.querySelector('td[data-l="Payment"]');if(!td||td.querySelector('.vb'))return;
+  td.insertAdjacentHTML('beforeend',`<div class="vb">⚠️ Student says paid – check your bank<br><button class="btn sm" onclick="verifyPay('${o.id}')">✔ Verified</button> <button class="btn sm del" onclick="rejectPay('${o.id}')">✖ Not received</button></div>`)})}
+const _ro0=renderOrders;renderOrders=function(){_ro0();decoPay()};
+let _pw=null;
+function payWatch(){if(_pw||!user||!db)return;
+  _pw=db.channel('autopay').on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'},p=>{const n=p.new||{};
+    if(user&&isAdmin(user))toast(`🔔 New order ${n.order_no||''} · ${rs(n.amount)} · ${n.pay_status==='paid'?'💰 PAID by UPI (check your bank)':'💳 not paid yet'}`)}).subscribe()}
+const _r1=route;route=function(){_r1();payWatch()};
+
+</script>
+<script>
+/* ===== PH-FORGOT: working forgot-password flow ===== */
+async function forgot(){const em=$('#em').value.trim().toLowerCase();if(!em)return showErr('Enter your email');
+  if(location.protocol==='file:')return showErr('Open the website from your ONLINE link (Netlify), not from the file on your computer. The reset link cannot come back to a local file.');
+  const b=$('#authbtn');if(b)b.disabled=true;
+  try{const {error}=await db.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});if(error)throw error;
+    toast('📧 If this email has an account, a reset link was sent. Check Inbox and Spam.')}
+  catch(e){const m=(e&&e.message)||'';showErr(/rate limit|security purposes|too many/i.test(m)?'Too many requests. Wait a few minutes, then try again.':niceErr(e))}
+  finally{if(b)b.disabled=false}}
+function recoverView(){app.innerHTML=`<div class="auth"><div class="card" style="max-width:420px;width:100%"><h2>🔒 Set new password</h2>
+  <label>New password (min 6)</label><div class="pw"><input id="np" type="password"><button type="button" class="eye" onclick="const i=$('#np'),j=$('#np2'),t=i.type==='password'?'text':'password';i.type=t;j.type=t;this.textContent=t==='password'?'👁️':'🙈'">👁️</button></div>
+  <label>Confirm password</label><input id="np2" type="password" onkeydown="if(event.key==='Enter')saveNp()">
+  <button class="btn" style="width:100%" onclick="saveNp()">✅ Save password</button></div></div>`}
+async function saveNp(){const p=$('#np').value;if(p.length<6)return toast('Password must be at least 6 characters');if(p!==$('#np2').value)return toast('Passwords do not match');
+  const {error}=await db.auth.updateUser({password:p});if(error)return toast(niceErr(error));
+  toast('✅ Password updated');try{history.replaceState(null,'',location.pathname)}catch(e){}route()}
+setTimeout(()=>{if(/error_code=|error=access_denied/.test(location.hash)){try{history.replaceState(null,'',location.pathname)}catch(e){}
+  if(!user){authView('forgot');showErr('⛔ This reset link has expired or was already used. Enter your email to get a new one.')}}},1500);
+
+</script>
+<script>
+/* ===== PH-FRIENDLY: students never see technical errors ===== */
+const FRIENDLY='⚠️ Temporary issue – we are working on it. Please try again in a little while. Thank you 🙏';
+const TECH=/schema cache|\bcolumn\b|relation "|supabase|\bsql\b|failed to fetch|networkerror|typeerror|referenceerror|cannot read propert|is not defined|is not a function|undefined|\bjwt\b|row-level|permission denied|violates|not allowed|function public|unexpected token|\bnull\b|\b50[0-9]\b|run supabase|run the sql/i;
+const tempCard=()=>`<div class="auth"><div class="card" style="max-width:460px;width:100%;text-align:center"><div style="font-size:46px">🛠️</div><h2 style="justify-content:center">Temporary issue</h2><p class="mut">Something went wrong on our side. We are working on it.<br>Please try again in a little while. Thank you 🙏</p><button class="btn" onclick="location.reload()">🔄 Try again</button></div></div>`;
+const isStaff=()=>!!(user&&isAdmin(user));
+window.onerror=function(m){console.error('[error]',m);if(/ResizeObserver|Script error/i.test(String(m)))return;
+  const a=document.getElementById('app');if(a&&!a.innerHTML.trim())a.innerHTML=tempCard();else if(!isStaff())toast(FRIENDLY)};
+window.addEventListener('unhandledrejection',e=>{console.error('[promise]',e.reason);if(!isStaff())toast(FRIENDLY)});
+(function(){let busy=false;
+  const soften=()=>{if(busy||isStaff())return;busy=true;
+    try{const t=document.getElementById('toast');if(t&&t.textContent&&t.textContent!==FRIENDLY&&TECH.test(t.textContent)){console.warn('[hidden]',t.textContent);t.textContent=FRIENDLY}
+      const ae=document.getElementById('autherr');if(ae&&ae.textContent&&ae.textContent!==FRIENDLY&&TECH.test(ae.textContent)){console.warn('[hidden]',ae.textContent);ae.textContent=FRIENDLY}
+      const mi=document.getElementById('mine');if(mi&&/^Could not load/.test(mi.textContent)){console.warn('[hidden]',mi.textContent);mi.innerHTML='<small class="mut">'+FRIENDLY+'</small>'}
+      const ap=document.getElementById('app');if(ap&&/^\s*⚠️\s*(Problem|Error)/.test(ap.textContent)){console.warn('[hidden]',ap.textContent);ap.innerHTML=tempCard()}}
+    finally{busy=false}};
+  new MutationObserver(soften).observe(document.body,{childList:true,subtree:true,characterData:true})})();
+
+</script>
+<script>
+/* ===== PH-SIGLOCK: server-signed payment lock barcode (cannot be forged) ===== */
+async function verifyLockBanner(code){const el=document.getElementById('lockres');if(!el)return;
+  const {data,error}=await db.rpc('verify_lock',{p_code:code});
+  if(error){el.className='scn bad';el.textContent='⛔ Could not verify. Run supabase_lock.sql in Supabase first. ('+error.message+')';return}
+  const r=data||{};
+  if(!r.found){el.className='scn bad';el.textContent='⛔ Barcode read, but no matching order was found.';return}
+  if(!r.valid){el.className='scn bad';el.innerHTML='⛔ FAKE / EDITED / OLD barcode – the lock signature does not match. The real amount of '+esc(r.order_no)+' is <b>'+rs(r.amount)+'</b>. Do not accept this barcode.';return}
+  const o=ADM.find(x=>x.order_no===r.order_no)||{},paid=r.pay_status==='paid';
+  el.className='scn ok';
+  el.innerHTML=`✅ GENUINE · ${esc(r.order_no)} · amount locked <b>${rs(r.amount)}</b> · ${paid?'✅ PAID':'💳 '+esc(r.pay_status||'unpaid')}`+(!paid&&o.id?` <button class="btn sm" onclick="upd('${o.id}',{pay_status:'paid',pay_method:'${o.pay_method||'UPI'}'})">✅ Confirm ${rs(r.amount)} received</button>`:'')}
+function scanBanner(sc){if(!sc)return'';const code=`${sc.no}.${sc.paise}.${sc.chk}`;setTimeout(()=>verifyLockBanner(code),0);return'<div id="lockres" class="scn">⏳ Verifying barcode…</div>'}
+function barcodes(){if(!window.JsBarcode)return;
+  document.querySelectorAll('svg.bc').forEach(el=>{try{
+    JsBarcode(el,el.dataset.code,{format:'CODE128',height:44,displayValue:false,margin:0,width:1.3});
+    const w=parseFloat(el.getAttribute('width')),h=parseFloat(el.getAttribute('height'));
+    if(w&&h){if(!el.getAttribute('viewBox'))el.setAttribute('viewBox',`0 0 ${w} ${h}`);el.removeAttribute('width');el.removeAttribute('height');el.style.cssText='width:100%;max-width:'+Math.round(w)+'px;height:auto'}
+    const c=el.dataset.code||'',sc=parseLock(c);
+    let cap=el.nextElementSibling;if(!cap||!cap.classList.contains('bcc')){cap=document.createElement('div');cap.className='bcc';el.insertAdjacentElement('afterend',cap)}
+    cap.innerHTML=sc?`<b>${esc(c)}</b><br><small>Order ${esc(sc.no)} · amount locked ${rs(sc.paise/100)} · server signature ${esc(sc.chk)}</small>`:`<b>${esc(c)}</b><br><small>Order ID only</small>`;
+  }catch(e){}})}
+
+</script>
+<script>
+/* ===== PH-DYNQR: auto amount-locked UPI QR ===== */
+function payUI(){
+  const r=document.querySelector('[name=pm]:checked');if(!r)return;
+  const upi=r.value==='UPI';$('#upi').classList.toggle('hide',!upi);
+  const go=$('#go');if(go)go.textContent=upi?`✅ I have paid ${rs(tot)} – Place order`:'✅ Place order (pay cash at shop)';
+  if(!upi||!cart.length)return;
+  const q=$('#qr');q.innerHTML='';
+  if(window.QRCode)new QRCode(q,{text:`upi://pay?pa=${cfg.upi}&pn=${encodeURIComponent(SHOP_NAME)}&am=${(+tot).toFixed(2)}&cu=INR&tn=PrintHub`,width:190,height:190,colorDark:'#4c1d95'});
+  q.insertAdjacentHTML('beforeend',`<div class="bcn">🔒 Amount locked: ${rs(tot)}</div>`);
+}
+</script>
+<script>
+/* ===== PH-NOAUTOPAID: UPI orders start UNPAID, admin confirms ===== */
+async function placeOrder(){
+  if(!cart.length)return toast('Add a PDF first');
+  const bad=cart.find(x=>!x.np);if(bad)return toast('Enter page numbers for '+bad.name);
+  const pm=document.querySelector('[name=pm]:checked').value;
+  const b=$('#go');b.disabled=true;upl('Uploading your PDF(s)…');
+  try{
+    const items=[];
+    for(const it of cart){
+      const path=`${user.id}/${Date.now()}_${it.name.replace(/[^\w.]/g,'_')}`;
+      let url=it.url;
+      if(!url){const up=await db.storage.from('pdfs').upload(path,it.file);if(up.error)throw up.error;url=db.storage.from('pdfs').getPublicUrl(path).data.publicUrl}
+      items.push({name:it.name,url,pages:it.np,tp:it.pages,pr:it.mode!=='custom'&&it.sel==='range'?it.pr:'',mode:it.mode,co:it.co,du:it.du,sb:it.sb,copies:it.mode==='custom'?1:it.copies,kc:it.kc,kb:it.kb,kd:it.kd,c:it.c,b:it.b,d:it.d,amt:it.amt,dt:(it.dt||'').trim()})
+    }
+    const m=user.user_metadata||{};
+    const no='PH-'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
+    const sum=k=>items.reduce((s,x)=>s+x[k],0);
+    const row={user_id:user.id,name:m.name,phone:m.phone,class:m.class,email:user.email,order_no:no,note:($('#note').value||'').trim()||null,items,
+      file_name:items[0].name+(items.length>1?` +${items.length-1} more`:''),file_url:items[0].url,total_pages:sum('pages'),color_pages:sum('c'),bw_pages:sum('b'),duplex_pages:sum('d'),copies:1,amount:tot,pay_method:pm,pay_status:'unpaid'};
+    const {data:ins,error}=await db.from('orders').insert(row).select('pay_lock,amount').single();
+    if(!error&&ins){row.amount=ins.amount;row.pay_lock=ins.pay_lock;regLocks([row])}
+    if(error)throw error;
+    cart=[];uplOff();thanks(row);
+  }catch(e){uplOff();b.disabled=false;toast(niceErr(e))}
+}
+/* button text: no "I have paid" claim */
+const _payUI2=payUI;
+payUI=function(){_payUI2();const r=document.querySelector('[name=pm]:checked'),go=$('#go');
+  if(r&&go)go.textContent=r.value==='UPI'?'✅ Place order (pay with the QR above)':'✅ Place order (pay cash at shop)'};
+</script>
+<style>
+/* PH-NOCLAIM2: hide "I have paid" everywhere */
+button[onclick*="claimPay"]{display:none!important}
+</style>
+<script>
+/* replace the leftover "tap I have paid" sentences */
+(function(){
+  const fix=()=>{
+    document.querySelectorAll('small,p').forEach(el=>{
+      if(el.children.length===0 && /tap\s*[“"]?I have paid/i.test(el.textContent)){
+        el.textContent='On a computer? Scan the QR with your phone. The shop will confirm your payment and this status will update here.';
+      }
+      if(el.children.length===0 && /Pay, then tap/i.test(el.textContent)){
+        el.textContent='Pay using the QR. The shop will confirm your payment and this status updates here.';
+      }
+    });
+  };
+  new MutationObserver(fix).observe(document.body,{childList:true,subtree:true});
+  fix();
+})();
+</script>
+<script>
+/* PH-ALPHA: sort folders and files A to Z (numbers in natural order) */
+const _shopRender0=shopRender;
+shopRender=function(){
+  const cmp=(a,b)=>String(a.name||'').localeCompare(String(b.name||''),undefined,{numeric:true,sensitivity:'base'});
+  SHOPF.sort(cmp);
+  FOLD.sort(cmp);
+  _shopRender0();
+};
+</script>
+<style>
+/* ===== PH-ACCOUNT: SaaS account menu ===== */
+#nav{gap:10px}
+.acct{position:relative}
+.acb{display:flex;align-items:center;gap:10px;padding:5px 12px 5px 5px;border:1px solid #e0e7ff;background:#fff;border-radius:999px;cursor:pointer;font-family:inherit;color:var(--ink);transition:.25s var(--e);box-shadow:0 2px 8px rgba(79,70,229,.08)}
+.acb:hover,.acct.open .acb{border-color:var(--p);box-shadow:0 0 0 4px rgba(124,58,237,.12)}
+.acav{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--b),var(--p));color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center;flex:none;position:relative}
+.acav::after{content:"";position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;background:#22c55e;border:2px solid #fff}
+.acn{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;min-width:0}
+.acn b{font-size:14px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acn small{font-size:11px;color:var(--mut)}
+.acc{font-size:11px;color:var(--mut);transition:.25s}
+.acct.open .acc{transform:rotate(180deg)}
+.acm{position:absolute;right:0;top:calc(100% + 10px);width:280px;background:#fff;border:1px solid #eef0f6;border-radius:16px;box-shadow:0 18px 44px rgba(30,27,75,.22);padding:8px;opacity:0;visibility:hidden;transform:translateY(-8px) scale(.98);transform-origin:top right;transition:.22s var(--e);z-index:50;text-align:left}
+.acct.open .acm{opacity:1;visibility:visible;transform:none}
+.acm .ph0{display:flex;gap:12px;align-items:center;padding:12px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border-radius:12px;margin-bottom:6px}
+.acm .ph0 .acav{width:44px;height:44px;font-size:18px}
+.acm .ph0 div{min-width:0}
+.acm .ph0 b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acm .ph0 small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rolep{display:inline-block;margin-top:4px;background:#ede9fe;color:var(--p);font-size:10.5px;font-weight:800;letter-spacing:.4px;padding:2px 8px;border-radius:20px}
+.acm .it{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;background:none;border-radius:10px;font:600 14px inherit;font-family:inherit;color:#475569;cursor:pointer;text-decoration:none;text-align:left}
+.acm .it:hover{background:#f5f3ff;color:var(--p)}
+.acm hr{border:0;border-top:1px solid #eef0f6;margin:6px 4px}
+.acm .it.out{color:#dc2626}.acm .it.out:hover{background:#fee2e2;color:#dc2626}
+@media(max-width:600px){.acn,.acc{display:none}.acb{padding:4px}.acm{width:min(280px,calc(100vw - 24px))}}
+</style>
+<script>
+/* ===== PH-ACCOUNT ===== */
+function navAcct(){
+  const n=document.getElementById('nav');if(!n||!user||isAdmin(user))return;
+  const m=user.user_metadata||{},email=user.email||'',
+        nm=(m.name||email.split('@')[0]||'Student').trim(),
+        ic=(nm.charAt(0)||'S').toUpperCase(),
+        w=(cfg.phone||'').replace(/\D/g,'');
+  n.innerHTML=`<div class="acct" id="acct">
+    <button class="acb" onclick="toggleAcct(event)" aria-haspopup="true">
+      <span class="acav">${esc(ic)}</span>
+      <span class="acn"><b>${esc(nm)}</b><small>Student</small></span>
+      <span class="acc">▼</span>
+    </button>
+    <div class="acm" onclick="event.stopPropagation()">
+      <div class="ph0"><span class="acav">${esc(ic)}</span><div><b>${esc(nm)}</b><small class="mut">${esc(email)}</small><span class="rolep">STUDENT</span></div></div>
+      ${m.class?`<div class="it" style="cursor:default">🏫 ${esc(m.class)}</div>`:''}
+      ${m.phone?`<div class="it" style="cursor:default">📞 ${esc(m.phone)}</div>`:''}
+      <hr>
+      <button class="it" onclick="closeAcct();document.getElementById('mine')?.scrollIntoView({behavior:'smooth'})">🧾 My orders</button>
+      <a class="it" href="tel:${esc(cfg.phone)}">☎️ Call shop</a>
+      <a class="it" href="https://wa.me/${w.length===10?'91'+w:w}" target="_blank" rel="noopener">💬 WhatsApp shop</a>
+      <hr>
+      <button class="it out" onclick="closeAcct();logout()">🚪 Log out</button>
+    </div></div>`;
+}
+function toggleAcct(e){e.stopPropagation();document.getElementById('acct')?.classList.toggle('open')}
+function closeAcct(){document.getElementById('acct')?.classList.remove('open')}
+document.addEventListener('click',closeAcct);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAcct()});
+const _routeAcct=route;route=function(){_routeAcct();navAcct()};
+if(typeof user!=='undefined'&&user)navAcct();
+</script>
+<style>
+/* ===== PH-ADMACCT: admin SaaS account menu ===== */
+.sd{z-index:20}
+.aacct{position:relative;margin-top:auto;border-top:1px solid #eef2ff;padding-top:10px}
+.aab{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border:1px solid #e0e7ff;background:#fff;border-radius:14px;cursor:pointer;font-family:inherit;color:var(--ink);text-align:left;transition:.25s var(--e);box-shadow:0 2px 8px rgba(79,70,229,.08)}
+.aab:hover,.aacct.open .aab{border-color:var(--p);box-shadow:0 0 0 4px rgba(124,58,237,.12)}
+.aav{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--b),var(--p));color:#fff;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;flex:none;position:relative}
+.aav::after{content:"";position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;background:#22c55e;border:2px solid #fff}
+.aan{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.aan b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aan small{font-size:11px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aac{font-size:11px;color:var(--mut);transition:.25s;flex:none}
+.aacct.open .aac{transform:rotate(180deg)}
+.aam{position:absolute;left:0;bottom:calc(100% + 10px);width:262px;background:#fff;border:1px solid #eef0f6;border-radius:16px;box-shadow:0 -14px 44px rgba(30,27,75,.22);padding:8px;opacity:0;visibility:hidden;transform:translateY(8px) scale(.98);transform-origin:bottom left;transition:.22s var(--e);z-index:60;text-align:left}
+.aacct.open .aam{opacity:1;visibility:visible;transform:none}
+.aam .ph0{display:flex;gap:12px;align-items:center;padding:12px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border-radius:12px;margin-bottom:6px}
+.aam .ph0 .aav{width:44px;height:44px;font-size:18px}
+.aam .ph0 div{min-width:0}
+.aam .ph0 b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aam .ph0 small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mut)}
+.aam .rolep{display:inline-block;margin-top:4px;background:#ede9fe;color:var(--p);font-size:10.5px;font-weight:800;letter-spacing:.4px;padding:2px 8px;border-radius:20px}
+.aam .info{display:flex;gap:10px;align-items:center;padding:7px 12px;font-size:13px;color:var(--mut);overflow-wrap:anywhere}
+.aam .it{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;background:none;border-radius:10px;font-weight:600;font-size:14px;font-family:inherit;color:#475569;cursor:pointer;text-align:left}
+.aam .it:hover{background:#f5f3ff;color:var(--p)}
+.aam hr{border:0;border-top:1px solid #eef0f6;margin:6px 4px}
+.aam .it.out{color:#dc2626}.aam .it.out:hover{background:#fee2e2;color:#dc2626}
+@media(max-width:820px){
+  .aacct{margin:0 0 0 auto;border:0;padding:0;display:block!important}
+  .aan,.aac{display:none}
+  .aab{width:auto;padding:4px;border-radius:50%}
+  .aam{left:auto;right:0;bottom:auto;top:calc(100% + 10px);width:min(262px,calc(100vw - 24px));transform-origin:top right;transform:translateY(-8px) scale(.98)}
+  .aacct.open .aam{transform:none}
+}
+</style>
+<script>
+/* ===== PH-ADMACCT ===== */
+function admAcct(){
+  const sd=document.querySelector('.sd');if(!sd||!user||!isAdmin(user))return;
+  sd.querySelectorAll('.me').forEach(e=>e.remove());
+  sd.querySelectorAll('button.mi[onclick*="logout"]').forEach(e=>e.remove());
+  sd.querySelector('.aacct')?.remove();
+  const email=user.email||'',nm=(cfg.owner||'Admin').trim(),ic=(nm.charAt(0)||'A').toUpperCase();
+  sd.insertAdjacentHTML('beforeend',`<div class="aacct" id="aacct">
+    <button class="aab" onclick="toggleAdm(event)" aria-haspopup="true">
+      <span class="aav">${esc(ic)}</span>
+      <span class="aan"><b>${esc(nm)}</b><small>Administrator</small></span>
+      <span class="aac">▲</span>
+    </button>
+    <div class="aam" onclick="event.stopPropagation()">
+      <div class="ph0"><span class="aav">${esc(ic)}</span><div><b>${esc(nm)}</b><small>${esc(email)}</small><span class="rolep">ADMIN · SHOP OWNER</span></div></div>
+      <div class="info">🏪 ${esc(SHOP_NAME)}</div>
+      ${cfg.phone?`<div class="info">📞 ${esc(cfg.phone)}</div>`:''}
+      <div class="info">📱 ${esc(cfg.upi)}</div>
+      <hr>
+      <button class="it" onclick="closeAdm();setTab('orders')">🧾 Orders</button>
+      <button class="it" onclick="closeAdm();setTab('files')">📚 Shop files</button>
+      <button class="it" onclick="closeAdm();setTab('settings')">⚙️ Settings &amp; UPI</button>
+      <button class="it" onclick="closeAdm();printShopQr()">🖨️ Print shop QR</button>
+      <hr>
+      <button class="it out" onclick="closeAdm();logout()">🚪 Log out</button>
+    </div></div>`);
+}
+function toggleAdm(e){e.stopPropagation();document.getElementById('aacct')?.classList.toggle('open')}
+function closeAdm(){document.getElementById('aacct')?.classList.remove('open')}
+document.addEventListener('click',closeAdm);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAdm()});
+const _adminView0=adminView;
+adminView=function(){const r=_adminView0.apply(this,arguments);admAcct();return r};
+if(typeof user!=='undefined'&&user&&isAdmin(user)&&document.querySelector('.sd'))admAcct();
+</script>
+<style>
+/* ===== PH-SPLASH: loading screen ===== */
+#splash{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:linear-gradient(120deg,#eef2ff,#f5f3ff,#e0f2fe,#ede9fe);transition:opacity .6s ease,visibility .6s;font-family:system-ui,Segoe UI,sans-serif}
+#splash.out{opacity:0;visibility:hidden}
+#splash .sb1,#splash .sb2{position:absolute;border-radius:50%;filter:blur(80px);opacity:.45;animation:ls-float 8s ease-in-out infinite}
+#splash .sb1{width:300px;height:300px;background:#60a5fa;top:-80px;left:-80px}
+#splash .sb2{width:340px;height:340px;background:#a78bfa;bottom:-100px;right:-80px;animation-delay:-4s}
+@keyframes ls-float{50%{transform:translate(40px,30px) scale(1.12)}}
+.ls-prn{position:relative;width:150px;height:130px;z-index:1}
+.ls-body{position:absolute;left:10px;top:44px;width:130px;height:52px;border-radius:16px;background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 14px 26px rgba(79,70,229,.35);z-index:3;animation:ls-bob 1.8s ease-in-out infinite}
+.ls-body::before{content:"";position:absolute;left:16px;right:16px;top:12px;height:6px;border-radius:4px;background:#1e1b4b}
+.ls-body::after{content:"";position:absolute;right:14px;bottom:10px;width:8px;height:8px;border-radius:50%;background:#4ade80;animation:ls-blink 1s infinite}
+.ls-sheet{position:absolute;left:38px;top:48px;width:74px;height:84px;background:#fff;border-radius:5px 5px 8px 8px;box-shadow:0 8px 18px rgba(79,70,229,.25);z-index:2;padding:30px 10px 0;animation:ls-feed 2.2s ease-in-out infinite}
+.ls-sheet i{display:block;height:6px;border-radius:3px;background:#c7d2fe;margin-bottom:8px}
+.ls-sheet i:nth-child(1){width:70%;background:#7c3aed}.ls-sheet i:nth-child(2){background:#2563eb}.ls-sheet i:nth-child(3){width:55%}
+@keyframes ls-feed{0%{transform:translateY(-70px);opacity:0}25%{opacity:1}60%,85%{transform:translateY(20px);opacity:1}100%{transform:translateY(20px);opacity:0}}
+@keyframes ls-bob{50%{transform:translateY(-5px)}}
+@keyframes ls-blink{50%{opacity:.25}}
+.ls-name{display:flex;align-items:center;gap:10px;font-weight:800;font-size:28px;z-index:1;animation:ls-up .7s cubic-bezier(.22,1,.36,1) both}
+.ls-name span{background:linear-gradient(90deg,#2563eb,#7c3aed);-webkit-background-clip:text;background-clip:text;color:transparent}
+@keyframes ls-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.ls-bar{width:200px;height:6px;border-radius:6px;background:#e0e7ff;overflow:hidden;z-index:1}
+.ls-bar i{display:block;height:100%;width:40%;border-radius:6px;background:linear-gradient(90deg,#2563eb,#7c3aed);animation:ls-slide 1.2s ease-in-out infinite}
+@keyframes ls-slide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+.ls-txt{z-index:1;color:#6b7280;font-size:13px;font-weight:600;letter-spacing:.5px}
+.ls-txt b{display:inline-block;animation:ls-dot 1.2s infinite}.ls-txt b:nth-child(2){animation-delay:.2s}.ls-txt b:nth-child(3){animation-delay:.4s}
+@keyframes ls-dot{0%,100%{opacity:.2}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){#splash *{animation:none!important}}
+</style>
+
+<div id="splash">
+  <div class="sb1"></div><div class="sb2"></div>
+  <div class="ls-prn">
+    <div class="ls-sheet"><i></i><i></i><i></i></div>
+    <div class="ls-body"></div>
+  </div>
+  <div class="ls-name">
+    <svg width="38" height="38" viewBox="0 0 48 48"><defs><linearGradient id="lsg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs><rect width="48" height="48" rx="13" fill="url(#lsg)"/><rect x="15" y="8" width="18" height="12" rx="2" fill="#fff" opacity=".95"/><rect x="8" y="18" width="32" height="16" rx="5" fill="#fff"/><rect x="15" y="29" width="18" height="11" rx="2" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/><circle cx="34" cy="23" r="1.8" fill="#7c3aed"/></svg>
+    <span>PrintHub</span>
+  </div>
+  <div class="ls-bar"><i></i></div>
+  <div class="ls-txt">Getting things ready<b>.</b><b>.</b><b>.</b></div>
+</div>
+<script>
+(function(){
+  var s=document.getElementById('splash'),t0=Date.now(),done=false;
+  function hide(){
+    if(done)return;done=true;
+    var wait=Math.max(0,1400-(Date.now()-t0));   /* show at least 1.4 seconds */
+    setTimeout(function(){s.classList.add('out');setTimeout(function(){s.remove()},700)},wait);
+  }
+  window.addEventListener('load',function(){setTimeout(hide,200)});
+  setTimeout(hide,6000);   /* safety: never stuck */
+})();
+</script>
+<style>
+/* ===== PH-RESPONSIVE: fit every device, nothing cut ===== */
+
+/* 1. Base: dynamic viewport, no sideways scroll, keeps sticky header working */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{overflow-x:clip;max-width:100%}          /* 'clip' keeps position:sticky working; older browsers keep 'hidden' */
+body{min-height:100vh;min-height:100dvh}
+*,*::before,*::after{min-width:0}
+img,svg,canvas,video,iframe{max-width:100%}
+h1,h2,h3,b,p,td,small,label{overflow-wrap:anywhere}
+
+/* 2. Fluid type */
+h2{font-size:clamp(17px,2.4vw,22px)}
+.ah h2{font-size:clamp(20px,3vw,26px)}
+.wt{font-size:clamp(24px,4vw,34px)}
+.total{font-size:clamp(24px,5vw,34px)}
+.oid{font-size:clamp(18px,5vw,28px);max-width:100%;overflow-wrap:anywhere}
+.stat b,.sk b{font-size:clamp(20px,4vw,28px)}
+
+/* 3. Header: logo left, account right, never wraps badly, respects notches */
+header{padding-left:max(4%,env(safe-area-inset-left));padding-right:max(4%,env(safe-area-inset-right));flex-wrap:nowrap;gap:10px}
+.logo{min-width:0;flex:0 1 auto}
+#nav{flex:0 0 auto;margin-left:auto}
+@media(max-width:380px){.logo span{font-size:18px}.logo svg{width:28px;height:28px}}
+
+/* 4. Page padding + safe areas (landscape phones with notch) */
+main{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right));padding-bottom:max(20px,env(safe-area-inset-bottom))}
+main.wide{padding:0}
+.adm{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+@media(min-width:1700px){.ac{max-width:1600px;margin:0 auto;width:100%}}   /* ultra-wide screens */
+
+/* 5. Login / signup card */
+.auth{min-height:calc(100vh - 40px);min-height:calc(100dvh - 40px);padding:12px 0}
+.split{max-width:min(1000px,100%)}
+@media(max-width:820px){.split{min-height:0}.lp{padding:22px 16px}.bt{flex-direction:column}.bt .btn{width:100%}}
+@media(max-height:560px) and (orientation:landscape){.auth{align-items:flex-start}}
+.prn{max-width:100%}
+@media(max-width:1000px) and (min-width:821px){.prn{transform:scale(.85)}.rp{padding:20px}}
+
+/* 6. Student screens */
+.two .fl{flex-wrap:wrap!important}
+.two .fl .oa{width:100%!important}
+.two .fl .oa .btn{flex:1!important}
+@media(min-width:1100px){
+  .two .fl{flex-wrap:nowrap!important}
+  .two .fl .oa{width:auto!important}
+  .two .fl .oa .btn{flex:none!important}
+}
+#shopf{max-height:min(480px,60vh)}
+.drop{padding:26px 12px}
+.row{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+.seg.g4{display:grid;grid-template-columns:repeat(4,1fr)}
+@media(max-width:700px){.seg.g4{grid-template-columns:1fr 1fr}}
+.seg button,.tabs button{white-space:normal;line-height:1.2}
+.ib{flex-wrap:wrap}
+.pay label{min-width:min(100%,130px)}
+.bkr{grid-template-columns:minmax(110px,1.2fr) 2fr auto auto}
+@media(max-width:600px){.bkr{grid-template-columns:1fr auto}}
+.bcw{max-width:100%;overflow:hidden}
+.bcw svg{max-width:100%}
+.pqr img,.pqr canvas,#qr img,#qr canvas,.mqr canvas,.mqr img{max-width:100%;height:auto!important}
+.payb{justify-content:center}
+@media(max-width:480px){.payb{flex-direction:column;text-align:center}.pbi{align-items:center}}
+
+/* 7. Account menus never leave the screen */
+.acm{max-width:calc(100vw - 20px)}
+.aam{max-width:calc(100vw - 20px)}
+.acn b{max-width:min(140px,30vw)}
+@media(max-width:600px){.acm{position:fixed;right:10px;left:10px;top:calc(env(safe-area-inset-top) + 62px);width:auto}}
+@media(max-width:820px){.aam{position:fixed;left:10px;right:10px;top:70px;bottom:auto;width:auto;max-width:none}}
+
+/* 8. Admin: dynamic height sidebar, cards, toolbar, tables */
+.sd{height:100vh;height:100dvh;overflow-y:auto}
+@media(max-width:820px){
+  .sd{height:auto;overflow:visible;position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);padding-top:max(10px,env(safe-area-inset-top))}
+  .sd .mi{flex:0 0 auto}
+  .ac{padding:14px max(10px,env(safe-area-inset-left)) 90px}
+}
+.tools{width:100%}
+.tools input{flex:1 1 220px;width:auto;max-width:100%}
+@media(max-width:820px){.tools input{flex:1 1 100%}.tools .btn{flex:1 1 calc(50% - 8px)}}
+.ot .sc,.ft{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.pgn{justify-content:space-between}
+@media(max-width:600px){.pgn{flex-direction:column;align-items:stretch;text-align:center}.pgn .pb{justify-content:center}}
+.selbar{width:max-content;max-width:calc(100vw - 20px);bottom:max(16px,env(safe-area-inset-bottom))}
+.sc4{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}
+@media(max-width:360px){.sc4{grid-template-columns:1fr 1fr;gap:8px}.sk{padding:10px}.sk svg{width:60px}}
+
+/* 9. Pop-ups and toast */
+#mdl{padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+.mb{max-height:92vh;max-height:92dvh;width:min(620px,100%)}
+#toast{width:max-content;max-width:min(92vw,460px)}
+#upl{padding:16px}.ub{max-width:min(90vw,340px)}
+
+/* 10. Touch devices: comfortable tap targets, no zoom on inputs */
+@media(pointer:coarse){
+  .btn.sm,.chk,.crumb button,.acm .it,.aam .it,.pgn .pb button{min-height:40px}
+  .x{width:40px;height:40px}
+  input,select,textarea{font-size:16px}
+}
+@media(hover:none){.btn:hover,.shopc:hover{transform:none}}
+
+/* 11. Splash on small or short screens */
+#splash{height:100vh;height:100dvh;overflow:hidden;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom))}
+.ls-name{font-size:clamp(22px,7vw,28px)}
+.ls-bar{width:min(200px,60vw)}
+@media(max-height:520px){#splash{gap:8px}.ls-prn{transform:scale(.6);margin:-24px 0}.ls-name{font-size:20px}.ls-txt{font-size:11px}}
+@media(max-width:340px){.ls-prn{transform:scale(.85)}}
+
+/* 12. Motion + print */
+@media(prefers-reduced-motion:reduce){.blob,#splash *{animation:none!important}}
+@media print{html,body{overflow:visible}.acct,.aacct,.sd{display:none!important}}
+</style>
+</body></html>
